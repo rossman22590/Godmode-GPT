@@ -49,19 +49,20 @@ def new_interact(
     # Initialize memory and make sure it is empty.
     # this is particularly important for indexing and referencing pinecone memory
     agent = Agent(
-        ai_name=ai_config.ai_name,
-        ai_role=ai_config.ai_role,
-        ai_goals=ai_config.ai_goals,
-        memory=memory,
-        full_message_history=full_message_history,
-        next_action_count=next_action_count,
-        system_prompt=system_prompt,
-        agent_id=agent_id,
-        command_name=command_name,
-        arguments=arguments,
-        cfg=cfg,
+        ai_name=ai_config.ai_name, # save
+        ai_role=ai_config.ai_role, # save 
+        ai_goals=ai_config.ai_goals, # save
+        agent_id=agent_id, # save
+        full_message_history=full_message_history, # save
+        command_name=command_name, # save
+        arguments=arguments, # save
+        assistant_reply=assistant_reply, # save
+        agents={}, # save
         triggering_prompt=triggering_prompt,
-        assistant_reply=assistant_reply,
+        system_prompt=system_prompt,
+        memory=memory,
+        next_action_count=next_action_count,
+        cfg=cfg,
     )
 
     (
@@ -75,13 +76,6 @@ def new_interact(
         command_name=command_name,
         arguments=arguments,
     )
-
-    import pickle
-    dump = pickle.dumps(agent)
-    dstr = dump.decode()
-    print(dstr)
-
-
 
     # generate simplified task name
     task = None
@@ -326,8 +320,9 @@ def godmode_main():
         cfg.openai_api_key = openai_key
         cfg.fast_llm_model = gpt_model
         cfg.smart_llm_model = gpt_model
+        cfg.agent_id = agent_id
 
-        memory: PineconeMemory = get_memory(cfg, agent_id) # type: ignore
+        memory: PineconeMemory = get_memory(cfg) # type: ignore
 
         ai_config = AIConfig(
             ai_name=ai_name,

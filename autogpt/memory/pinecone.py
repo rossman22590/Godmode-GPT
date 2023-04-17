@@ -58,7 +58,7 @@ class PineconeMemory(MemoryProvider):
     def add(self, data):
         vector = create_embedding_with_ada(data, self.cfg)
         # no metadata here. We may wish to change that long term.
-        self.index.upsert([(str(self.vec_num), vector, {"raw_text": data})])
+        self.index.upsert([(str(self.vec_num), vector, {"raw_text": data})], namespace=self.cfg.agent_id)
         _text = f"Inserting data into memory at index: {self.vec_num}:\n data: {data}"
         self.vec_num += 1
         return _text

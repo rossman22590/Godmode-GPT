@@ -1,9 +1,11 @@
 from colorama import Fore, Style
+from autogpt.agent_manager import AgentManager
 from autogpt.api_utils import upload_log
 from autogpt.app import execute_command, get_command
 
 from autogpt.chat import chat_with_ai, create_chat_message
 from autogpt.config import Config
+from autogpt.config.config import is_valid_int
 from autogpt.json_fixes.master_json_fix_method import fix_json_using_multiple_techniques
 from autogpt.json_validation.validate_json import validate_json
 from autogpt.logs import logger, print_assistant_thoughts
@@ -50,6 +52,7 @@ class Agent:
         agent_id,
         cfg: Config,
         assistant_reply: str,
+        agents: dict[int, tuple[str, list[dict[str, str]], str]],
     ):
         self.cfg = cfg
         self.ai_name = ai_name
@@ -64,6 +67,7 @@ class Agent:
         self.arguments = arguments
         self.agent_id = agent_id
         self.assistant_reply = assistant_reply
+        self.agent_manager = AgentManager(agents)
 
     def start_interaction_loop(self):
         # Interaction Loop
@@ -268,6 +272,68 @@ class Agent:
         )
 
 
+    def start_agent(self, name: str, task: str, prompt: str, model=None) -> str:
+        """Start an agent with a given name, task, and prompt
+
+        Args:
+            name (str): The name of the agent
+            task (str): The task of the agent
+            prompt (str): The prompt for the agent
+            model (str): The model to use for the agent
+
+        Returns:
+            str: The response of the agent
+        """
+        if model is None:
+            model = self.cfg.fast_llm_model
+            
+        # Remove underscores from name
+        voice_name = name.replace("_", " ")
+
+        first_message = f"""You are {name}.  Respond with: "Acknowledged"."""
+        agent_intro = f"{voice_name} here, Reporting for duty!"
+
+        key, ack = self.agent_manager.create_agent(task, first_message, model, self)
+
+        # Assign task (prompt), get response
+        agent_response = self.agent_manager.message_agent(key, prompt, self)
+
+        return f"Agent {name} created with key {key}. First response: {agent_response}"
+
+
+    def message_agent(self, key: str, message: str) -> str:
+        """Message an agent with a given key and message"""
+        # Check if the key is a valid integer
+        if is_valid_int(key):
+            agent_response = self.agent_manager.message_agent(int(key), message, self)
+        else:
+            return "Invalid key, must be an integer."
+
+        return agent_response
+
+
+    def list_agents(self):
+        """List all agents
+
+        Returns:
+            str: A list of all agents
+        """
+        return "List of agents:\n" + "\n".join(
+            [str(x[0]) + ": " + x[1] for x in self.agent_manager.list_agents()]
+        )
+
+
+    def delete_agent(self, key: str) -> str:
+        """Delete an agent with a given key
+
+        Args:
+            key (str): The key of the agent to delete
+
+        Returns:
+            str: A message indicating whether the agent was deleted or not
+        """
+        result = self.agent_manager.delete_agent(key)
+        return f"Agent {key} deleted." if result else f"Agent {key} does not exist."
 
 
 

@@ -5,10 +5,6 @@ from autogpt.memory import get_memory
 from autogpt.config import Config
 from autogpt.llm_utils import create_chat_completion
 
-global_config = Config()
-MEMORY = get_memory(global_config)
-
-
 def split_text(text: str, max_length: int = 8192) -> Generator[str, None, None]:
     """Split text into chunks of a maximum length
 
@@ -70,15 +66,16 @@ def summarize_text(
 
         memory_to_add = f"Source: {url}\n" f"Raw content part#{i + 1}: {chunk}"
 
+        MEMORY = get_memory(cfg)
         MEMORY.add(memory_to_add)
 
         print(f"Summarizing chunk {i + 1} / {len(chunks)}")
         messages = [create_message(chunk, question)]
 
         summary = create_chat_completion(
-            model=global_config.fast_llm_model,
+            model=cfg.fast_llm_model,
             messages=messages,
-            max_tokens=global_config.browse_summary_max_token,
+            max_tokens=cfg.browse_summary_max_token,
             cfg=cfg,
         )
         summaries.append(summary)
@@ -94,9 +91,9 @@ def summarize_text(
     messages = [create_message(combined_summary, question)]
 
     return create_chat_completion(
-        model=global_config.fast_llm_model,
+        model=cfg.fast_llm_model,
         messages=messages,
-        max_tokens=global_config.browse_summary_max_token,
+        max_tokens=cfg.browse_summary_max_token,
         cfg=cfg,
     )
 

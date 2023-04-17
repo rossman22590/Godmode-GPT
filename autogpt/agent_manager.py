@@ -3,20 +3,20 @@ from __future__ import annotations
 from typing import Union
 
 from autogpt.llm_utils import create_chat_completion
-from autogpt.config.config import Config
-
 
 class AgentManager():
     """Agent manager for managing GPT agents"""
 
-    def __init__(self):
+    agents: dict[int, tuple[str, list[dict[str, str]], str]]
+
+    def __init__(self, agents={}):
         self.next_key = 0
-        self.agents = {}  # key, (task, full_message_history, model)
+        self.agents = agents  # key, (task, full_message_history, model)
 
     # Create new GPT agent
     # TODO: Centralise use of create_chat_completion() to globally enforce token limit
 
-    def create_agent(self, task: str, prompt: str, model: str, cfg: Config) -> tuple[int, str]:
+    def create_agent(self, task: str, prompt: str, model: str, cfg) -> tuple[int, str]:
         """Create a new agent and return its key
 
         Args:
@@ -50,7 +50,7 @@ class AgentManager():
 
         return key, agent_reply
 
-    def message_agent(self, key: str | int, message: str, cfg: Config) -> str:
+    def message_agent(self, key: str | int, message: str, cfg) -> str:
         """Send a message to an agent and return its response
 
         Args:

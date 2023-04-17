@@ -9,11 +9,9 @@ from requests import Response
 from bs4 import BeautifulSoup
 
 from autogpt.config import Config
-from autogpt.memory import get_memory
 from autogpt.processing.html import extract_hyperlinks, format_hyperlinks
 
 global_config = Config()
-memory = get_memory(global_config)
 
 session = requests.Session()
 session.headers.update({"User-Agent": global_config.user_agent})

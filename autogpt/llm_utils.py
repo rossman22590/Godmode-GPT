@@ -6,15 +6,8 @@ import openai
 from openai.error import APIError, RateLimitError
 from colorama import Fore
 
-from autogpt.config import Config
-
-global_config = Config()
-
-openai.api_key = global_config.openai_api_key
-
-
 def call_ai_function(
-    function: str, args: List[str], description: str, cfg: Config, model: str | None = None
+    function: str, args: List[str], description: str, cfg: object, model: str | None = None
 ) -> str:
     """Call an AI function
 
@@ -72,7 +65,7 @@ def create_chat_completion(
         temperature = cfg.temperature
     response = None
     num_retries = 10
-    if global_config.debug_mode:
+    if cfg.debug_mode:
         print(
             Fore.GREEN
             + f"Creating chat completion with model {model}, temperature {temperature},"
@@ -81,9 +74,9 @@ def create_chat_completion(
     for attempt in range(num_retries):
         backoff = 2 ** (attempt + 2)
         try:
-            if global_config.use_azure:
+            if cfg.use_azure:
                 response = openai.ChatCompletion.create(
-                    deployment_id=global_config.get_azure_deployment_id_for_model(model), # type: ignore
+                    deployment_id=cfg.get_azure_deployment_id_for_model(model), # type: ignore
                     model=model,
                     messages=messages,
                     temperature=temperature,
@@ -99,7 +92,7 @@ def create_chat_completion(
                 )
             break
         except RateLimitError:
-            if global_config.debug_mode:
+            if cfg.debug_mode:
                 print(
                     Fore.RED + "Error: ",
                     f"Reached rate limit, passing..." + Fore.RESET,
@@ -111,7 +104,7 @@ def create_chat_completion(
                 raise
             if attempt == num_retries - 1:
                 raise
-        if global_config.debug_mode:
+        if cfg.debug_mode:
             print(
                 Fore.RED + "Error: ",
                 f"API Bad gateway. Waiting {backoff} seconds..." + Fore.RESET,
@@ -129,10 +122,10 @@ def create_embedding_with_ada(text: str, cfg: Config) -> Optional[List]:
     for attempt in range(num_retries):
         backoff = 2 ** (attempt + 2)
         try:
-            if global_config.use_azure:
+            if cfg.use_azure:
                 return openai.Embedding.create(
                     input=[text], # type: ignore
-                    engine=global_config.get_azure_deployment_id_for_model(
+                    engine=cfg.get_azure_deployment_id_for_model(
                         "text-embedding-ada-002"
                     ),
                 )["data"][0]["embedding"]
@@ -151,7 +144,7 @@ def create_embedding_with_ada(text: str, cfg: Config) -> Optional[List]:
                 raise
             if attempt == num_retries - 1:
                 raise
-        if global_config.debug_mode:
+        if cfg.debug_mode:
             print(
                 Fore.RED + "Error: ",
                 f"API Bad gateway. Waiting {backoff} seconds..." + Fore.RESET,
