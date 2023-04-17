@@ -1,7 +1,6 @@
 """ Command and Control """
 import json
 from typing import List, NoReturn, Union, Dict
-from autogpt.agent.agent_manager import AgentManager
 from autogpt.commands.evaluate_code import evaluate_code
 from autogpt.commands.google_search import google_official_search, google_search
 from autogpt.commands.improve_code import improve_code
@@ -19,18 +18,11 @@ from autogpt.commands.file_operations import (
     write_to_file,
     download_file
 )
-from autogpt.json_fixes.parsing import fix_and_parse_json
 from autogpt.memory import get_memory
 from autogpt.processing.text import summarize_text
-from autogpt.speech import say_text
 from autogpt.commands.web_selenium import browse_website
 from autogpt.commands.git_operations import clone_repository
 from autogpt.commands.twitter import send_tweet
-
-
-global_config = Config()
-AGENT_MANAGER = AgentManager()
-
 
 def is_valid_int(value: str) -> bool:
     """Check if the value is a valid integer
@@ -113,7 +105,7 @@ def execute_command(command_name: str, arguments, cfg: Config):
 
     Returns:
         str: The result of the command"""
-    memory = get_memory(global_config)
+    memory = get_memory(cfg)
 
     try:
         command_name = map_command_synonyms(command_name)
@@ -121,7 +113,7 @@ def execute_command(command_name: str, arguments, cfg: Config):
             # Check if the Google API key is set and use the official search method
             # If the API key is not set or has only whitespaces, use the unofficial
             # search method
-            key = global_config.google_api_key
+            key = cfg.google_api_key
             if key and key.strip() and key != "your-google-api-key":
                 google_result = google_official_search(arguments["input"])
                 return google_result
@@ -166,7 +158,7 @@ def execute_command(command_name: str, arguments, cfg: Config):
         elif command_name == "search_files":
             return search_files(arguments["directory"])
         elif command_name == "download_file":
-            if not global_config.allow_downloads:
+            if not cfg.allow_downloads:
                 return "Error: You do not have user authorization to download files locally."
             return download_file(arguments["url"], arguments["file"])
         elif command_name == "browse_website":
@@ -183,7 +175,7 @@ def execute_command(command_name: str, arguments, cfg: Config):
         elif command_name == "execute_python_file":  # Add this command
             return execute_python_file(arguments["file"])
         elif command_name == "execute_shell":
-            if global_config.execute_local_commands:
+            if cfg.execute_local_commands:
                 return execute_shell(arguments["command_line"])
             else:
                 return (
