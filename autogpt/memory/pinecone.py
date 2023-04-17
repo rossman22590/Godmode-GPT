@@ -78,7 +78,7 @@ class PineconeMemory(MemoryProvider):
         """
         query_embedding = create_embedding_with_ada(data, self.cfg)
         results = self.index.query(
-            query_embedding, top_k=num_relevant, include_metadata=True
+            query_embedding, top_k=num_relevant, include_metadata=True, namespace=self.cfg.agent_id
         )
         sorted_results = sorted(results.matches, key=lambda x: x.score)
         return [str(item["metadata"]["raw_text"]) for item in sorted_results]
