@@ -76,7 +76,7 @@ def get_command(response_json: Dict):
         if "name" not in command:
             return "Error:", "Missing 'name' field in 'command' object"
 
-        command_name = command["name"]
+        command_name: str = str(command["name"])
 
         # Use an empty dictionary if 'args' field is not present in 'command' object
         arguments = command.get("args", {})

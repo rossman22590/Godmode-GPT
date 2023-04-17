@@ -4,13 +4,25 @@ from colorama import Fore, Style
 from autogpt.logs import logger
 from autogpt.memory.base import MemoryProviderSingleton
 from autogpt.llm_utils import create_embedding_with_ada
+from autogpt.config import Config
 
+cfg = Config()
+
+pinecone_api_key = cfg.pinecone_api_key
+pinecone_region = cfg.pinecone_region
+if pinecone_api_key and pinecone_region:
+    pinecone.init(api_key=pinecone_api_key, environment=pinecone_region)
+else:
+    print(
+        "Pinecone API key and region not set. "
+        "Please set them in the config file."
+    )
 
 class PineconeMemory(MemoryProviderSingleton):
+    cfg: Config
+
     def __init__(self, cfg):
-        pinecone_api_key = cfg.pinecone_api_key
-        pinecone_region = cfg.pinecone_region
-        pinecone.init(api_key=pinecone_api_key, environment=pinecone_region)
+        self.cfg = cfg
         dimension = 1536
         metric = "cosine"
         pod_type = "p1"
@@ -44,7 +56,7 @@ class PineconeMemory(MemoryProviderSingleton):
         self.index = pinecone.Index(table_name)
 
     def add(self, data):
-        vector = create_embedding_with_ada(data)
+        vector = create_embedding_with_ada(data, self.cfg)
         # no metadata here. We may wish to change that long term.
         self.index.upsert([(str(self.vec_num), vector, {"raw_text": data})])
         _text = f"Inserting data into memory at index: {self.vec_num}:\n data: {data}"
@@ -64,7 +76,7 @@ class PineconeMemory(MemoryProviderSingleton):
         :param data: The data to compare to.
         :param num_relevant: The number of relevant data to return. Defaults to 5
         """
-        query_embedding = create_embedding_with_ada(data)
+        query_embedding = create_embedding_with_ada(data, self.cfg)
         results = self.index.query(
             query_embedding, top_k=num_relevant, include_metadata=True
         )
