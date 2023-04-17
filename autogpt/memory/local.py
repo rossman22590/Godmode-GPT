@@ -7,7 +7,7 @@ from typing import Any
 import numpy as np
 import orjson
 
-from autogpt.memory.base import MemoryProviderSingleton
+from autogpt.memory.base import MemoryProvider
 from autogpt.llm_utils import create_embedding_with_ada
 
 EMBED_DIM = 1536
@@ -26,7 +26,7 @@ class CacheContent:
     )
 
 
-class LocalCache(MemoryProviderSingleton):
+class LocalCache(MemoryProvider):
     """A class that stores the memory in a local file"""
 
     def __init__(self, cfg) -> None:

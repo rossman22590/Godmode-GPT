@@ -2,7 +2,7 @@ import pinecone
 from colorama import Fore, Style
 
 from autogpt.logs import logger
-from autogpt.memory.base import MemoryProviderSingleton
+from autogpt.memory.base import MemoryProvider
 from autogpt.llm_utils import create_embedding_with_ada
 from autogpt.config import Config
 
@@ -18,7 +18,7 @@ else:
         "Please set them in the config file."
     )
 
-class PineconeMemory(MemoryProviderSingleton):
+class PineconeMemory(MemoryProvider):
     cfg: Config
 
     def __init__(self, cfg):

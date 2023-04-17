@@ -21,7 +21,7 @@ def get_ada_embedding(text):
         ][0]["embedding"]
 
 
-class MemoryProviderSingleton(AbstractSingleton):
+class MemoryProvider():
     @abc.abstractmethod
     def add(self, data):
         pass

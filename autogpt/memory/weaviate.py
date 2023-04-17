@@ -1,5 +1,5 @@
 from autogpt.config import Config
-from autogpt.memory.base import MemoryProviderSingleton, get_ada_embedding
+from autogpt.memory.base import MemoryProvider, get_ada_embedding
 import uuid
 import weaviate
 from weaviate import Client
@@ -20,7 +20,7 @@ def default_schema(weaviate_index):
     }
 
 
-class WeaviateMemory(MemoryProviderSingleton):
+class WeaviateMemory(MemoryProvider):
     def __init__(self, cfg):
         auth_credentials = self._build_auth_credentials(cfg)
 
