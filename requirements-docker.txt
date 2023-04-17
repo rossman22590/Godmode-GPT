@@ -18,11 +18,7 @@ Pillow
 selenium
 webdriver-manager
 coverage
-flake8
 numpy
-pre-commit
-black
-isort
 gitpython==3.1.31
 tweepy
 jsonschema
