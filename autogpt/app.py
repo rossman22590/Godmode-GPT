@@ -129,32 +129,32 @@ def execute_command(command_name: str, arguments, cfg: Config):
             return str(safe_message)
         elif command_name == "memory_add":
             return memory.add(arguments["string"])
-        elif command_name == "start_agent":
-            return cfg.start_agent(
-                arguments["name"], arguments["task"], arguments["prompt"]
-            )
-        elif command_name == "message_agent":
-            return cfg.message_agent(arguments["key"], arguments["message"])
-        elif command_name == "list_agents":
-            return cfg.list_agents()
-        elif command_name == "delete_agent":
-            return cfg.delete_agent(arguments["key"])
+        # elif command_name == "start_agent":
+        #     return start_agent(
+        #         arguments["name"], arguments["task"], arguments["prompt"]
+        #     )
+        # elif command_name == "message_agent":
+        #     return message_agent(arguments["key"], arguments["message"])
+        # elif command_name == "list_agents":
+        #     return list_agents()
+        # elif command_name == "delete_agent":
+        #     return delete_agent(arguments["key"])
         elif command_name == "get_text_summary":
             return get_text_summary(arguments["url"], arguments["question"], cfg)
         elif command_name == "get_hyperlinks":
             return get_hyperlinks(arguments["url"])
-        elif command_name == "clone_repository":
-            return clone_repository(
-                arguments["repository_url"], arguments["clone_path"]
-            )
+        # elif command_name == "clone_repository":
+        #     return clone_repository(
+        #         arguments["repository_url"], arguments["clone_path"]
+        #     )
         elif command_name == "read_file":
-            return read_file(arguments["file"])
+            return read_file(cfg.agent_id, arguments["file"])
         elif command_name == "write_to_file":
-            return write_to_file(arguments["file"], arguments["text"])
+            return write_to_file(cfg.agent_id, arguments["file"], arguments["text"])
         elif command_name == "append_to_file":
-            return append_to_file(arguments["file"], arguments["text"])
+            return append_to_file(cfg.agent_id, arguments["file"], arguments["text"])
         elif command_name == "delete_file":
-            return delete_file(arguments["file"])
+            return delete_file(cfg.agent_id, arguments["file"])
         elif command_name == "search_files":
             return search_files(arguments["directory"])
         elif command_name == "download_file":

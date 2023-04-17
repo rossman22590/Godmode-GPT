@@ -1,5 +1,5 @@
 """Git operations for autogpt"""
-import git
+# import git
 from autogpt.config import Config
 from autogpt.workspace import path_in_workspace
 
