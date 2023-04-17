@@ -28,7 +28,7 @@ from autogpt.commands.git_operations import clone_repository
 from autogpt.commands.twitter import send_tweet
 
 
-CFG = Config()
+global_config = Config()
 AGENT_MANAGER = AgentManager()
 
 
@@ -104,7 +104,7 @@ def map_command_synonyms(command_name: str):
     return command_name
 
 
-def execute_command(command_name: str, arguments):
+def execute_command(command_name: str, arguments, cfg: Config):
     """Execute the command and return the result
 
     Args:
@@ -113,7 +113,7 @@ def execute_command(command_name: str, arguments):
 
     Returns:
         str: The result of the command"""
-    memory = get_memory(CFG)
+    memory = get_memory(global_config)
 
     try:
         command_name = map_command_synonyms(command_name)
@@ -121,7 +121,7 @@ def execute_command(command_name: str, arguments):
             # Check if the Google API key is set and use the official search method
             # If the API key is not set or has only whitespaces, use the unofficial
             # search method
-            key = CFG.google_api_key
+            key = global_config.google_api_key
             if key and key.strip() and key != "your-google-api-key":
                 google_result = google_official_search(arguments["input"])
                 return google_result
@@ -138,17 +138,17 @@ def execute_command(command_name: str, arguments):
         elif command_name == "memory_add":
             return memory.add(arguments["string"])
         elif command_name == "start_agent":
-            return start_agent(
+            return cfg.start_agent(
                 arguments["name"], arguments["task"], arguments["prompt"]
             )
         elif command_name == "message_agent":
-            return message_agent(arguments["key"], arguments["message"])
+            return cfg.message_agent(arguments["key"], arguments["message"])
         elif command_name == "list_agents":
-            return list_agents()
+            return cfg.list_agents()
         elif command_name == "delete_agent":
-            return delete_agent(arguments["key"])
+            return cfg.delete_agent(arguments["key"])
         elif command_name == "get_text_summary":
-            return get_text_summary(arguments["url"], arguments["question"])
+            return get_text_summary(arguments["url"], arguments["question"], cfg)
         elif command_name == "get_hyperlinks":
             return get_hyperlinks(arguments["url"])
         elif command_name == "clone_repository":
@@ -166,24 +166,24 @@ def execute_command(command_name: str, arguments):
         elif command_name == "search_files":
             return search_files(arguments["directory"])
         elif command_name == "download_file":
-            if not CFG.allow_downloads:
+            if not global_config.allow_downloads:
                 return "Error: You do not have user authorization to download files locally."
             return download_file(arguments["url"], arguments["file"])
         elif command_name == "browse_website":
-            return browse_website(arguments["url"], arguments["question"])
+            return browse_website(arguments["url"], arguments["question"], cfg)
         # TODO: Change these to take in a file rather than pasted code, if
         # non-file is given, return instructions "Input should be a python
         # filepath, write your code to file and try again"
         elif command_name == "evaluate_code":
-            return evaluate_code(arguments["code"])
+            return evaluate_code(arguments["code"], cfg)
         elif command_name == "improve_code":
-            return improve_code(arguments["suggestions"], arguments["code"])
+            return improve_code(arguments["suggestions"], arguments["code"], cfg)
         elif command_name == "write_tests":
-            return write_tests(arguments["code"], arguments.get("focus"))
+            return write_tests(arguments["code"], arguments.get("focus"), cfg)
         elif command_name == "execute_python_file":  # Add this command
             return execute_python_file(arguments["file"])
         elif command_name == "execute_shell":
-            if CFG.execute_local_commands:
+            if global_config.execute_local_commands:
                 return execute_shell(arguments["command_line"])
             else:
                 return (
@@ -211,7 +211,7 @@ def execute_command(command_name: str, arguments):
         return f"Error: {str(e)}"
 
 
-def get_text_summary(url: str, question: str) -> str:
+def get_text_summary(url: str, question: str, cfg: Config) -> str:
     """Return the results of a google search
 
     Args:
@@ -222,7 +222,7 @@ def get_text_summary(url: str, question: str) -> str:
         str: The summary of the text
     """
     text = scrape_text(url)
-    summary = summarize_text(url, text, question)
+    summary = summarize_text(url, text, question, cfg)
     return f""" "Result" : {summary}"""
 
 
@@ -242,73 +242,3 @@ def shutdown() -> NoReturn:
     """Shut down the program"""
     print("Shutting down...")
     quit()
-
-
-def start_agent(name: str, task: str, prompt: str, model=CFG.fast_llm_model) -> str:
-    """Start an agent with a given name, task, and prompt
-
-    Args:
-        name (str): The name of the agent
-        task (str): The task of the agent
-        prompt (str): The prompt for the agent
-        model (str): The model to use for the agent
-
-    Returns:
-        str: The response of the agent
-    """
-    # Remove underscores from name
-    voice_name = name.replace("_", " ")
-
-    first_message = f"""You are {name}.  Respond with: "Acknowledged"."""
-    agent_intro = f"{voice_name} here, Reporting for duty!"
-
-    # Create agent
-    if CFG.speak_mode:
-        say_text(agent_intro, 1)
-    key, ack = AGENT_MANAGER.create_agent(task, first_message, model)
-
-    if CFG.speak_mode:
-        say_text(f"Hello {voice_name}. Your task is as follows. {task}.")
-
-    # Assign task (prompt), get response
-    agent_response = AGENT_MANAGER.message_agent(key, prompt)
-
-    return f"Agent {name} created with key {key}. First response: {agent_response}"
-
-
-def message_agent(key: str, message: str) -> str:
-    """Message an agent with a given key and message"""
-    # Check if the key is a valid integer
-    if is_valid_int(key):
-        agent_response = AGENT_MANAGER.message_agent(int(key), message)
-    else:
-        return "Invalid key, must be an integer."
-
-    # Speak response
-    if CFG.speak_mode:
-        say_text(agent_response, 1)
-    return agent_response
-
-
-def list_agents():
-    """List all agents
-
-    Returns:
-        str: A list of all agents
-    """
-    return "List of agents:\n" + "\n".join(
-        [str(x[0]) + ": " + x[1] for x in AGENT_MANAGER.list_agents()]
-    )
-
-
-def delete_agent(key: str) -> str:
-    """Delete an agent with a given key
-
-    Args:
-        key (str): The key of the agent to delete
-
-    Returns:
-        str: A message indicating whether the agent was deleted or not
-    """
-    result = AGENT_MANAGER.delete_agent(key)
-    return f"Agent {key} deleted." if result else f"Agent {key} does not exist."

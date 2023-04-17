@@ -7,7 +7,7 @@ from autogpt.config import Config
 from autogpt.setup import prompt_user
 from autogpt.utils import clean_input
 
-CFG = Config()
+global_config = Config()
 
 
 def get_prompt() -> str:
@@ -47,23 +47,23 @@ def get_prompt() -> str:
             "browse_website",
             {"url": "<url>", "question": "<what_you_want_to_find_on_website>"},
         ),
-        (
-            "Start GPT Agent",
-            "start_agent",
-            {"name": "<name>", "task": "<short_task_desc>", "prompt": "<prompt>"},
-        ),
-        (
-            "Message GPT Agent",
-            "message_agent",
-            {"key": "<key>", "message": "<message>"},
-        ),
-        ("List GPT Agents", "list_agents", {}),
-        ("Delete GPT Agent", "delete_agent", {"key": "<key>"}),
-        (
-            "Clone Repository",
-            "clone_repository",
-            {"repository_url": "<url>", "clone_path": "<directory>"},
-        ),
+        # (
+        #     "Start GPT Agent",
+        #     "start_agent",
+        #     {"name": "<name>", "task": "<short_task_desc>", "prompt": "<prompt>"},
+        # ),
+        # (
+        #     "Message GPT Agent",
+        #     "message_agent",
+        #     {"key": "<key>", "message": "<message>"},
+        # ),
+        # ("List GPT Agents", "list_agents", {}),
+        # ("Delete GPT Agent", "delete_agent", {"key": "<key>"}),
+        # (
+        #     "Clone Repository",
+        #     "clone_repository",
+        #     {"repository_url": "<url>", "clone_path": "<directory>"},
+        # ),
         ("Write to file", "write_to_file", {"file": "<file>", "text": "<text>"}),
         ("Read file", "read_file", {"file": "<file>"}),
         ("Append to file", "append_to_file", {"file": "<file>", "text": "<text>"}),
@@ -80,9 +80,9 @@ def get_prompt() -> str:
             "write_tests",
             {"code": "<full_code_string>", "focus": "<list_of_focus_areas>"},
         ),
-        ("Execute Python File", "execute_python_file", {"file": "<file>"}),
-        ("Generate Image", "generate_image", {"prompt": "<prompt>"}),
-        ("Send Tweet", "send_tweet", {"text": "<text>"}),
+        # ("Execute Python File", "execute_python_file", {"file": "<file>"}),
+        # ("Generate Image", "generate_image", {"prompt": "<prompt>"}),
+        # ("Send Tweet", "send_tweet", {"text": "<text>"}),
     ]
 
     # Only add the audio to text command if the model is specified
@@ -163,7 +163,7 @@ def construct_prompt() -> str:
     Returns:
         str: The prompt string
     """
-    config = AIConfig.load(CFG.ai_settings_file)
+    config = AIConfig.load(global_config.ai_settings_file)
 
     # Get rid of this global:
     global ai_name

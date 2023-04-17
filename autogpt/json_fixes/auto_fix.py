@@ -5,10 +5,7 @@ from autogpt.llm_utils import call_ai_function
 from autogpt.logs import logger
 from autogpt.config import Config
 
-CFG = Config()
-
-
-def fix_json(json_string: str, schema: str) -> str:
+def fix_json(json_string: str, schema: str, cfg: Config) -> str:
     """Fix the given JSON string to make it parseable and fully compliant with
         the provided schema.
 
@@ -34,7 +31,7 @@ def fix_json(json_string: str, schema: str) -> str:
     if not json_string.startswith("`"):
         json_string = "```json\n" + json_string + "\n```"
     result_string = call_ai_function(
-        function_string, args, description_string, model=CFG.fast_llm_model
+        function_string, args, description_string, model=cfg.fast_llm_model, cfg=cfg
     )
     logger.debug("------------ JSON FIX ATTEMPT ---------------")
     logger.debug(f"Original JSON: {json_string}")

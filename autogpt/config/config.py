@@ -1,13 +1,27 @@
 """Configuration class to store the state of bools for different scripts access."""
 import os
 from colorama import Fore
-
-from autogpt.config.singleton import Singleton
+from autogpt.agent.agent_manager import AgentManager
 
 import openai
 import yaml
 
 from dotenv import load_dotenv
+
+def is_valid_int(value: str) -> bool:
+    """Check if the value is a valid integer
+
+    Args:
+        value (str): The value to check
+
+    Returns:
+        bool: True if the value is a valid integer, False otherwise
+    """
+    try:
+        int(value)
+        return True
+    except ValueError:
+        return False
 
 load_dotenv(verbose=True)
 
@@ -27,6 +41,7 @@ class Config():
         self.speak_mode = False
         self.skip_reprompt = False
         self.allow_downloads = False
+        self.agent_manager = AgentManager()
 
         self.selenium_web_browser = os.getenv("USE_WEB_BROWSER", "chrome")
         self.ai_settings_file = os.getenv("AI_SETTINGS_FILE", "ai_settings.yaml")
@@ -97,7 +112,7 @@ class Config():
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36"
             " (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36",
         )
-        self.redis_host = os.getenv("REDIS_HOST", "localhost")
+        self.redis_host = os.getenv("REDIS_HOST", None)
         self.redis_port = os.getenv("REDIS_PORT", "6379")
         self.redis_password = os.getenv("REDIS_PASSWORD", "")
         self.wipe_redis_on_start = os.getenv("WIPE_REDIS_ON_START", "True") == "True"
@@ -229,6 +244,70 @@ class Config():
     def set_debug_mode(self, value: bool) -> None:
         """Set the debug mode value."""
         self.debug_mode = value
+
+
+    def start_agent(self, name: str, task: str, prompt: str, model=None) -> str:
+        """Start an agent with a given name, task, and prompt
+
+        Args:
+            name (str): The name of the agent
+            task (str): The task of the agent
+            prompt (str): The prompt for the agent
+            model (str): The model to use for the agent
+
+        Returns:
+            str: The response of the agent
+        """
+        if model is None:
+            model = self.fast_llm_model
+            
+        # Remove underscores from name
+        voice_name = name.replace("_", " ")
+
+        first_message = f"""You are {name}.  Respond with: "Acknowledged"."""
+        agent_intro = f"{voice_name} here, Reporting for duty!"
+
+        key, ack = self.agent_manager.create_agent(task, first_message, model, self)
+
+        # Assign task (prompt), get response
+        agent_response = self.agent_manager.message_agent(key, prompt, self)
+
+        return f"Agent {name} created with key {key}. First response: {agent_response}"
+
+
+    def message_agent(self, key: str, message: str) -> str:
+        """Message an agent with a given key and message"""
+        # Check if the key is a valid integer
+        if is_valid_int(key):
+            agent_response = self.agent_manager.message_agent(int(key), message, self)
+        else:
+            return "Invalid key, must be an integer."
+
+        return agent_response
+
+
+    def list_agents(self):
+        """List all agents
+
+        Returns:
+            str: A list of all agents
+        """
+        return "List of agents:\n" + "\n".join(
+            [str(x[0]) + ": " + x[1] for x in self.agent_manager.list_agents()]
+        )
+
+
+    def delete_agent(self, key: str) -> str:
+        """Delete an agent with a given key
+
+        Args:
+            key (str): The key of the agent to delete
+
+        Returns:
+            str: A message indicating whether the agent was deleted or not
+        """
+        result = self.agent_manager.delete_agent(key)
+        return f"Agent {key} deleted." if result else f"Agent {key} does not exist."
 
 
 def check_openai_api_key() -> None:

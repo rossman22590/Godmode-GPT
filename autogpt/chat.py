@@ -7,9 +7,6 @@ from autogpt.config import Config
 from autogpt.llm_utils import create_chat_completion
 from autogpt.logs import logger
 
-cfg = Config()
-
-
 def create_chat_message(role, content):
     """
     Create a chat message with the given role and content.
@@ -51,7 +48,7 @@ def generate_context(prompt, relevant_memory, full_message_history, model):
 
 # TODO: Change debug from hardcode to argument
 def chat_with_ai(
-    prompt, user_input, full_message_history, permanent_memory, token_limit
+    prompt, user_input, full_message_history, permanent_memory, token_limit, cfg: Config
 ):
     """Interact with the OpenAI API, sending the prompt, user input, message history,
     and permanent memory."""
@@ -160,6 +157,7 @@ def chat_with_ai(
                 model=model,
                 messages=current_context,
                 max_tokens=tokens_remaining,
+                cfg=cfg,
             )
 
             # Update full message history

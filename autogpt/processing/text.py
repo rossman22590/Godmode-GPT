@@ -5,8 +5,8 @@ from autogpt.memory import get_memory
 from autogpt.config import Config
 from autogpt.llm_utils import create_chat_completion
 
-CFG = Config()
-MEMORY = get_memory(CFG)
+global_config = Config()
+MEMORY = get_memory(global_config)
 
 
 def split_text(text: str, max_length: int = 8192) -> Generator[str, None, None]:
@@ -40,7 +40,7 @@ def split_text(text: str, max_length: int = 8192) -> Generator[str, None, None]:
 
 
 def summarize_text(
-    url: str, text: str, question: str, driver: Optional[WebDriver] = None
+    url: str, text: str, question: str, cfg: Config, driver: Optional[WebDriver] = None
 ) -> str:
     """Summarize text using the OpenAI API
 
@@ -76,9 +76,10 @@ def summarize_text(
         messages = [create_message(chunk, question)]
 
         summary = create_chat_completion(
-            model=CFG.fast_llm_model,
+            model=global_config.fast_llm_model,
             messages=messages,
-            max_tokens=CFG.browse_summary_max_token,
+            max_tokens=global_config.browse_summary_max_token,
+            cfg=cfg,
         )
         summaries.append(summary)
         print(f"Added chunk {i + 1} summary to memory")
@@ -93,9 +94,10 @@ def summarize_text(
     messages = [create_message(combined_summary, question)]
 
     return create_chat_completion(
-        model=CFG.fast_llm_model,
+        model=global_config.fast_llm_model,
         messages=messages,
-        max_tokens=CFG.browse_summary_max_token,
+        max_tokens=global_config.browse_summary_max_token,
+        cfg=cfg,
     )
 
 

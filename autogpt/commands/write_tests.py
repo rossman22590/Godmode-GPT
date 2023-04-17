@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import json
+from autogpt.config.config import Config
 from autogpt.llm_utils import call_ai_function
 
 
-def write_tests(code: str, focus: list[str]) -> str:
+def write_tests(code: str, focus: list[str], cfg: Config) -> str:
     """
     A function that takes in code and focus topics and returns a response from create
       chat completion api call.
@@ -27,4 +28,4 @@ def write_tests(code: str, focus: list[str]) -> str:
         " specific areas if required."
     )
 
-    return call_ai_function(function_string, args, description_string)
+    return call_ai_function(function_string, args, description_string, cfg=cfg)

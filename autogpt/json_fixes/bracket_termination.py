@@ -6,7 +6,7 @@ import json
 from typing import Optional
 from autogpt.config import Config
 
-CFG = Config()
+global_config = Config()
 
 
 def balance_braces(json_string: str) -> Optional[str]:

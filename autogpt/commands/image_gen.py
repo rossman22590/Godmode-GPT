@@ -10,7 +10,7 @@ from PIL import Image
 from autogpt.config import Config
 from autogpt.workspace import path_in_workspace
 
-CFG = Config()
+global_config = Config()
 
 
 def generate_image(prompt: str) -> str:
@@ -25,9 +25,9 @@ def generate_image(prompt: str) -> str:
     filename = f"{str(uuid.uuid4())}.jpg"
 
     # DALL-E
-    if CFG.image_provider == "dalle":
+    if global_config.image_provider == "dalle":
         return generate_image_with_dalle(prompt, filename)
-    elif CFG.image_provider == "sd":
+    elif global_config.image_provider == "sd":
         return generate_image_with_hf(prompt, filename)
     else:
         return "No Image Provider Set"
@@ -46,11 +46,11 @@ def generate_image_with_hf(prompt: str, filename: str) -> str:
     API_URL = (
         "https://api-inference.huggingface.co/models/CompVis/stable-diffusion-v1-4"
     )
-    if CFG.huggingface_api_token is None:
+    if global_config.huggingface_api_token is None:
         raise ValueError(
             "You need to set your Hugging Face API token in the config file."
         )
-    headers = {"Authorization": f"Bearer {CFG.huggingface_api_token}"}
+    headers = {"Authorization": f"Bearer {global_config.huggingface_api_token}"}
 
     response = requests.post(
         API_URL,
@@ -78,7 +78,7 @@ def generate_image_with_dalle(prompt: str, filename: str) -> str:
     Returns:
         str: The filename of the image
     """
-    openai.api_key = CFG.openai_api_key
+    openai.api_key = global_config.openai_api_key
 
     response = openai.Image.create(
         prompt=prompt,

@@ -6,10 +6,10 @@ from autogpt.memory.base import MemoryProviderSingleton
 from autogpt.llm_utils import create_embedding_with_ada
 from autogpt.config import Config
 
-cfg = Config()
+global_config = Config()
 
-pinecone_api_key = cfg.pinecone_api_key
-pinecone_region = cfg.pinecone_region
+pinecone_api_key = global_config.pinecone_api_key
+pinecone_region = global_config.pinecone_region
 if pinecone_api_key and pinecone_region:
     pinecone.init(api_key=pinecone_api_key, environment=pinecone_region)
 else:

@@ -3,8 +3,7 @@ import json
 import logging
 import time
 import traceback
-from autogpt.__main__ import construct_prompt
-from autogpt.commands import git_operations
+from autogpt.config.ai_config import AIConfig
 from autogpt.memory import get_memory
 import autogpt.chat as chat
 from autogpt.config import Config
@@ -15,7 +14,6 @@ from firebase_admin import auth as firebase_auth
 from autogpt.llm_utils import create_chat_completion
 from autogpt.api_utils import upload_log, get_file_urls
 import logging
-from colorama import Fore
 from autogpt.agent.agent import Agent
 
 from autogpt.config import Config
@@ -23,15 +21,13 @@ from autogpt.logs import logger, print_assistant_thoughts
 from autogpt.memory import get_memory
 from autogpt.memory.pinecone import PineconeMemory
 
-from autogpt.prompt import construct_prompt
-
-cfg = Config()
+global_config = Config()
 
 START = "###start###"
 
 def new_interact(
     cfg: Config,
-    ai_config,
+    ai_config: AIConfig,
     memory: PineconeMemory,
     command_name: str,
     arguments: str,
@@ -40,32 +36,90 @@ def new_interact(
     full_message_history=[],
 ):
     logger.set_level(logging.DEBUG if cfg.debug_mode else logging.INFO)
-    ai_name = ""
-    prompt = construct_prompt()
+    system_prompt = ai_config.construct_full_prompt()
     # print(prompt)
     # Initialize variables
     full_message_history = []
     next_action_count = 0
     # Make a constant:
-    user_input = (
+    triggering_prompt = (
         "Determine which next command to use, and respond using the"
         " format specified above:"
     )
     # Initialize memory and make sure it is empty.
     # this is particularly important for indexing and referencing pinecone memory
     agent = Agent(
-        ai_name=ai_name,
+        ai_name=ai_config.ai_name,
+        ai_role=ai_config.ai_role,
+        ai_goals=ai_config.ai_goals,
         memory=memory,
         full_message_history=full_message_history,
         next_action_count=next_action_count,
-        prompt=prompt,
-        user_input=user_input,
+        system_prompt=system_prompt,
         agent_id=agent_id,
         command_name=command_name,
         arguments=arguments,
         cfg=cfg,
+        triggering_prompt=triggering_prompt,
+        assistant_reply=assistant_reply,
     )
-    agent.start_interaction_loop()
+
+    (
+        command_name,
+        arguments,
+        thoughts,
+        full_message_history,
+        assistant_reply,
+        result,
+    ) = agent.single_step(
+        command_name=command_name,
+        arguments=arguments,
+    )
+
+    import pickle
+    dump = pickle.dumps(agent)
+    dstr = dump.decode()
+    print(dstr)
+
+
+
+    # generate simplified task name
+    task = None
+    try:
+        task = create_chat_completion(
+            [
+                chat.create_chat_message(
+                    "system",
+                    "You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2021-09\nCurrent date: 2023-03-26",
+                ),
+                chat.create_chat_message(
+                    "user",
+                    'Describe this action as succinctly as possible in one short sentence:\n\n```\nCOMMAND: browse_website\nARGS: {\n  "url": "https://www.amazon.com/",\n  "question": "What are the current top products in the Smart Home Device category?"\n}\n```',
+                ),
+                chat.create_chat_message(
+                    "assistant", "Find top Smart Home Device products on Amazon.com."
+                ),
+                chat.create_chat_message(
+                    "user",
+                    f"Describe this action as succinctly as possible in one short sentence:\n\n```\nCOMMAND: {command_name}\nARGS: {arguments}\n```",
+                ),
+            ],
+            model="gpt-3.5-turbo",
+            temperature=0.2,
+            cfg=cfg,
+        )
+    except Exception as e:
+        print(e)
+
+    return (
+        command_name,
+        arguments,
+        thoughts,
+        full_message_history,
+        assistant_reply,
+        result,
+        task,
+    )
 
 
 # make an api using flask
@@ -97,14 +151,14 @@ def get_remote_address() -> str:
     ) # type: ignore
 
 
-if cfg.redis_host is None:
+if global_config.redis_host is None:
     print("No redis host, using local limiter")
     limiter = Limiter(app=app, key_func=get_remote_address)
 else:
     limiter = Limiter(
         app=app,
         key_func=get_remote_address,
-        storage_uri=f"redis://{cfg.redis_host}:{cfg.redis_port}",
+        storage_uri=f"redis://{global_config.redis_host}:{global_config.redis_port}",
     )
 
 app.wsgi_app = LogRequestDurationMiddleware(app.wsgi_app)
@@ -230,7 +284,7 @@ def subgoals():
             model="gpt-3.5-turbo",
             temperature=0.2,
             max_tokens=150,
-            cfg=cfg,
+            cfg=global_config,
         )
     except Exception as e:
         if isinstance(e, OpenAIError):
@@ -243,17 +297,16 @@ def subgoals():
     )
 
 
-@app.route("/api", methods=["POST"])
+@app.route("/api/v2", methods=["POST"]) # type: ignore
 @limiter.limit(make_rate_limit("500 per day;200 per hour;8 per minute"))
 @verify_firebase_token
-def simple_api():
+def godmode_main():
     try:
         request_data = request.get_json()
 
         command_name = request_data["command"]
         arguments = request_data["arguments"]
         assistant_reply = request_data.get("assistant_reply", "")
-        openai_key = request_data.get("openai_key", None)
 
         ai_name = request_data["ai_name"]
         ai_description = request_data["ai_description"]
@@ -261,13 +314,27 @@ def simple_api():
         message_history = request_data.get("message_history", [])
 
         agent_id = request_data["agent_id"]
-        memory = get_memory(cfg, agent_id)
 
-        conf = AIConfig(
+        openai_key = request_data.get("openai_key", None)
+        gpt_model = "gpt-3.5-turbo"
+        if len(openai_key or "") > 0:
+            gpt_model = request_data.get("gpt_model", "gpt-3.5-turbo")
+        else:
+            gpt_model = "gpt-3.5-turbo"
+
+        cfg = Config()
+        cfg.openai_api_key = openai_key
+        cfg.fast_llm_model = gpt_model
+        cfg.smart_llm_model = gpt_model
+
+        memory: PineconeMemory = get_memory(cfg, agent_id) # type: ignore
+
+        ai_config = AIConfig(
             ai_name=ai_name,
             ai_role=ai_description,
             ai_goals=ai_goals,
         )
+
         (
             command_name,
             arguments,
@@ -276,15 +343,15 @@ def simple_api():
             assistant_reply,
             result,
             task,
-        ) = interact_with_ai(
-            conf,
-            memory,
-            command_name,
-            arguments,
-            assistant_reply,
-            agent_id,
-            message_history,
-            openai_key=openai_key,
+        ) = new_interact(
+            cfg=cfg,
+            ai_config=ai_config,
+            memory=memory,
+            command_name=command_name,
+            arguments=arguments,
+            assistant_reply=assistant_reply,
+            agent_id=agent_id,
+            full_message_history=message_history,
         )
     except Exception as e:
         if isinstance(e, OpenAIError):
@@ -308,7 +375,7 @@ def simple_api():
     )
 
 
-@app.route("/api/files", methods=["POST"])
+@app.route("/api/files", methods=["POST"]) # type: ignore
 @limiter.limit("800 per day;400 per hour;16 per minute")
 # @verify_firebase_token
 def api_files():

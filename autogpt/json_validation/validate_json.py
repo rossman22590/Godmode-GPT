@@ -3,7 +3,7 @@ from jsonschema import Draft7Validator
 from autogpt.config import Config
 from autogpt.logs import logger
 
-CFG = Config()
+global_config = Config()
 
 
 def validate_json(json_object: object, schema_name: object) -> object:
@@ -18,13 +18,13 @@ def validate_json(json_object: object, schema_name: object) -> object:
 
     if errors := sorted(validator.iter_errors(json_object), key=lambda e: e.path):
         logger.error("The JSON object is invalid.")
-        if CFG.debug_mode:
+        if global_config.debug_mode:
             logger.error(json.dumps(json_object, indent=4))   # Replace 'json_object' with the variable containing the JSON data
             logger.error("The following issues were found:")
 
             for error in errors:
                 logger.error(f"Error: {error.message}")
-    elif CFG.debug_mode:
+    elif global_config.debug_mode:
         print("The JSON object is valid.")
 
     return json_object

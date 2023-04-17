@@ -8,9 +8,9 @@ from colorama import Fore
 
 from autogpt.config import Config
 
-CFG = Config()
+global_config = Config()
 
-openai.api_key = CFG.openai_api_key
+openai.api_key = global_config.openai_api_key
 
 
 def call_ai_function(
@@ -31,7 +31,7 @@ def call_ai_function(
         str: The response from the function
     """
     if model is None:
-        model = CFG.smart_llm_model
+        model = cfg.smart_llm_model
     # For each arg, if any are None, convert to "None":
     args = [str(arg) if arg is not None else "None" for arg in args]
     # parse args to comma separated string
@@ -54,7 +54,7 @@ def create_chat_completion(
     messages: List[Dict[str, str]],
     cfg: Config,
     model: str | None = None,
-    temperature: float = CFG.temperature,
+    temperature: float | None = None,
     max_tokens: int | None = None,
 ) -> str:
     """Create a chat completion using the OpenAI API
@@ -68,9 +68,11 @@ def create_chat_completion(
     Returns:
         str: The response from the chat completion
     """
+    if temperature is None:
+        temperature = cfg.temperature
     response = None
     num_retries = 10
-    if CFG.debug_mode:
+    if global_config.debug_mode:
         print(
             Fore.GREEN
             + f"Creating chat completion with model {model}, temperature {temperature},"
@@ -79,9 +81,9 @@ def create_chat_completion(
     for attempt in range(num_retries):
         backoff = 2 ** (attempt + 2)
         try:
-            if CFG.use_azure:
+            if global_config.use_azure:
                 response = openai.ChatCompletion.create(
-                    deployment_id=CFG.get_azure_deployment_id_for_model(model), # type: ignore
+                    deployment_id=global_config.get_azure_deployment_id_for_model(model), # type: ignore
                     model=model,
                     messages=messages,
                     temperature=temperature,
@@ -97,7 +99,7 @@ def create_chat_completion(
                 )
             break
         except RateLimitError:
-            if CFG.debug_mode:
+            if global_config.debug_mode:
                 print(
                     Fore.RED + "Error: ",
                     f"Reached rate limit, passing..." + Fore.RESET,
@@ -109,7 +111,7 @@ def create_chat_completion(
                 raise
             if attempt == num_retries - 1:
                 raise
-        if CFG.debug_mode:
+        if global_config.debug_mode:
             print(
                 Fore.RED + "Error: ",
                 f"API Bad gateway. Waiting {backoff} seconds..." + Fore.RESET,
@@ -127,10 +129,10 @@ def create_embedding_with_ada(text: str, cfg: Config) -> Optional[List]:
     for attempt in range(num_retries):
         backoff = 2 ** (attempt + 2)
         try:
-            if CFG.use_azure:
+            if global_config.use_azure:
                 return openai.Embedding.create(
                     input=[text], # type: ignore
-                    engine=CFG.get_azure_deployment_id_for_model(
+                    engine=global_config.get_azure_deployment_id_for_model(
                         "text-embedding-ada-002"
                     ),
                 )["data"][0]["embedding"]
@@ -149,7 +151,7 @@ def create_embedding_with_ada(text: str, cfg: Config) -> Optional[List]:
                 raise
             if attempt == num_retries - 1:
                 raise
-        if CFG.debug_mode:
+        if global_config.debug_mode:
             print(
                 Fore.RED + "Error: ",
                 f"API Bad gateway. Waiting {backoff} seconds..." + Fore.RESET,

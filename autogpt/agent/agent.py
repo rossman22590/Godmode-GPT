@@ -1,4 +1,5 @@
 from colorama import Fore, Style
+from autogpt.api_utils import upload_log
 from autogpt.app import execute_command, get_command
 
 from autogpt.chat import chat_with_ai, create_chat_message
@@ -37,28 +38,32 @@ class Agent:
     def __init__(
         self,
         ai_name,
+        ai_role,
+        ai_goals,
         memory,
         full_message_history,
         next_action_count,
         system_prompt,
         triggering_prompt,
-        user_input,
         command_name,
         arguments,
         agent_id,
         cfg: Config,
+        assistant_reply: str,
     ):
         self.cfg = cfg
         self.ai_name = ai_name
+        self.ai_role = ai_role
+        self.ai_goals = ai_goals
         self.memory = memory
         self.full_message_history = full_message_history
         self.next_action_count = next_action_count
         self.system_prompt = system_prompt
         self.triggering_prompt = triggering_prompt
-        self.user_input = user_input
         self.command_name = command_name
         self.arguments = arguments
         self.agent_id = agent_id
+        self.assistant_reply = assistant_reply
 
     def start_interaction_loop(self):
         # Interaction Loop
@@ -89,9 +94,10 @@ class Agent:
                     self.full_message_history,
                     self.memory,
                     cfg.fast_token_limit,
+                    cfg,
                 )  # TODO: This hardcodes the model to use GPT3.5. Make this an argument
 
-            assistant_reply_json = fix_json_using_multiple_techniques(assistant_reply)
+            assistant_reply_json = fix_json_using_multiple_techniques(assistant_reply, self.cfg)
 
             # Print Assistant thoughts
             if assistant_reply_json != {}:
@@ -145,7 +151,7 @@ class Agent:
             else:
                 result = (
                     f"Command {command_name} returned: "
-                    f"{execute_command(command_name or '', arguments)}"
+                    f"{execute_command(command_name or '', arguments, cfg)}"
                 )
                 if self.next_action_count > 0:
                     self.next_action_count -= 1
@@ -171,12 +177,13 @@ class Agent:
                     "SYSTEM: ", Fore.YELLOW, "Unable to execute command"
                 )
 
-    def single_step(self, command_name, arguments):
+    def single_step(self, command_name: str, arguments: str):
         # Send message to AI, get response
         self.user_input = (
             self.arguments if command_name == "human_feedback" else "GENERATE NEXT COMMAND JSON"
         )
-        logger.typewriter_log(
+        godmode_log = ""
+        godmode_log += logger.typewriter_log(
             "NEXT ACTION: ",
             Fore.CYAN,
             f"COMMAND = {Fore.CYAN}{command_name}{Style.RESET_ALL}"
@@ -193,7 +200,7 @@ class Agent:
         else:
             result = (
                 f"Command {command_name} returned: "
-                f"{execute_command(command_name or '', arguments)}"
+                f"{execute_command(command_name or '', arguments, self.cfg)}"
             )
             if self.next_action_count > 0:
                 self.next_action_count -= 1
@@ -210,14 +217,55 @@ class Agent:
         # history
         if result is not None:
             self.full_message_history.append(create_chat_message("system", result))
-            logger.typewriter_log("SYSTEM: ", Fore.YELLOW, result)
+            godmode_log += logger.typewriter_log("SYSTEM: ", Fore.YELLOW, result)
         else:
             self.full_message_history.append(
                 create_chat_message("system", "Unable to execute command")
             )
-            logger.typewriter_log(
+            godmode_log += logger.typewriter_log(
                 "SYSTEM: ", Fore.YELLOW, "Unable to execute command"
             )
+        
+        assistant_reply = chat_with_ai(
+            self.system_prompt,
+            self.triggering_prompt,
+            self.full_message_history,
+            self.memory,
+            self.cfg.fast_token_limit,
+            self.cfg,
+        )
+
+        self.assistant_reply_json = fix_json_using_multiple_techniques(assistant_reply, self.cfg)
+
+        thoughts = {}
+        
+        # Print Assistant thoughts
+        if self.assistant_reply_json != {}:
+            # validate_json(self.assistant_reply_json, 'llm_response_format_1')
+            # Get command name and arguments
+            try:
+                log, thoughts = print_assistant_thoughts(self.ai_name, self.assistant_reply_json)
+                godmode_log += log
+                c, arguments = get_command(self.assistant_reply_json) # type: ignore
+                command_name = c or "None"
+                # command_name, arguments = assistant_reply_json_valid["command"]["name"], assistant_reply_json_valid["command"]["args"]
+            except Exception as e:
+                godmode_log += "Error: \n" + str(e)
+        
+        # upload log
+        ai_info = f"You are {self.ai_name}, {self.ai_role}\nGOALS:\n\n"
+        for i, goal in enumerate(self.ai_goals):
+            ai_info += f"{i+1}. {goal}\n"
+        upload_log(ai_info + "\n\n" + memory_to_add + "\n\n" + godmode_log, self.agent_id)
+
+        return (
+            command_name,
+            arguments,
+            thoughts,
+            self.full_message_history,
+            assistant_reply,
+            result,
+        )
 
 
 

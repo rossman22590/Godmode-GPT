@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+from autogpt.config.config import Config
 
 from autogpt.llm_utils import call_ai_function
 
 
-def improve_code(suggestions: list[str], code: str) -> str:
+def improve_code(suggestions: list[str], code: str, cfg: Config) -> str:
     """
     A function that takes in code and suggestions and returns a response from create
       chat completion api call.
@@ -26,4 +27,4 @@ def improve_code(suggestions: list[str], code: str) -> str:
         " provided, making no other changes."
     )
 
-    return call_ai_function(function_string, args, description_string)
+    return call_ai_function(function_string, args, description_string, cfg=cfg)

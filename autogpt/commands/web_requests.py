@@ -12,11 +12,11 @@ from autogpt.config import Config
 from autogpt.memory import get_memory
 from autogpt.processing.html import extract_hyperlinks, format_hyperlinks
 
-CFG = Config()
-memory = get_memory(CFG)
+global_config = Config()
+memory = get_memory(global_config)
 
 session = requests.Session()
-session.headers.update({"User-Agent": CFG.user_agent})
+session.headers.update({"User-Agent": global_config.user_agent})
 
 
 def is_valid_url(url: str) -> bool:

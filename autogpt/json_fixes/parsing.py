@@ -14,7 +14,7 @@ from autogpt.json_fixes.missing_quotes import add_quotes_to_property_names
 from autogpt.logs import logger
 from autogpt.speech import say_text
 
-CFG = Config()
+global_config = Config()
 
 JSON_SCHEMA = """
 {
@@ -30,7 +30,8 @@ JSON_SCHEMA = """
         "reasoning": "reasoning",
         "plan": "- short bulleted\n- list that conveys\n- long-term plan",
         "criticism": "constructive self-criticism",
-        "speak": "thoughts summary to say to user"
+        "speak": "thoughts summary to say to user",
+        "relevant_goal": "a single number representing which goal is most relevant to the current task"
     }
 }
 """
@@ -44,12 +45,12 @@ def correct_json(json_to_load: str) -> str:
     """
 
     try:
-        if CFG.debug_mode:
+        if global_config.debug_mode:
             print("json", json_to_load)
         json.loads(json_to_load)
         return json_to_load
     except json.JSONDecodeError as e:
-        if CFG.debug_mode:
+        if global_config.debug_mode:
             print("json loads error", e)
         error_message = str(e)
         if error_message.startswith("Invalid \\escape"):
@@ -62,7 +63,7 @@ def correct_json(json_to_load: str) -> str:
                 json.loads(json_to_load)
                 return json_to_load
             except json.JSONDecodeError as e:
-                if CFG.debug_mode:
+                if global_config.debug_mode:
                     print("json loads error - add quotes", e)
                 error_message = str(e)
         if balanced_str := balance_braces(json_to_load):
@@ -71,7 +72,7 @@ def correct_json(json_to_load: str) -> str:
 
 
 def fix_and_parse_json(
-    json_to_load: str, try_to_fix_with_gpt: bool = True
+    json_to_load: str, cfg: Config, try_to_fix_with_gpt: bool = True
 ) -> Dict[Any, Any]:
     """Fix and parse JSON string
 
@@ -105,11 +106,11 @@ def fix_and_parse_json(
         maybe_fixed_json = maybe_fixed_json[: last_brace_index + 1]
         return json.loads(maybe_fixed_json)
     except (json.JSONDecodeError, ValueError) as e:
-        return try_ai_fix(try_to_fix_with_gpt, e, json_to_load)
+        return try_ai_fix(try_to_fix_with_gpt, e, json_to_load, cfg=cfg)
 
 
 def try_ai_fix(
-    try_to_fix_with_gpt: bool, exception: Exception, json_to_load: str
+    try_to_fix_with_gpt: bool, exception: Exception, json_to_load: str, cfg: Config
 ) -> Dict[Any, Any]:
     """Try to fix the JSON with the AI
 
@@ -126,7 +127,7 @@ def try_ai_fix(
     """
     if not try_to_fix_with_gpt:
         raise exception
-    if CFG.debug_mode:
+    if global_config.debug_mode:
         logger.warn(
             "Warning: Failed to parse AI output, attempting to fix."
             "\n If you see this warning frequently, it's likely that"
@@ -134,7 +135,7 @@ def try_ai_fix(
             " slightly."
         )
     # Now try to fix this up using the ai_functions
-    ai_fixed_json = fix_json(json_to_load, JSON_SCHEMA)
+    ai_fixed_json = fix_json(json_to_load, JSON_SCHEMA, cfg=cfg)
 
     if ai_fixed_json != "failed":
         return json.loads(ai_fixed_json)
@@ -144,8 +145,8 @@ def try_ai_fix(
     return {}
 
 
-def attempt_to_fix_json_by_finding_outermost_brackets(json_string: str):
-    if CFG.speak_mode and CFG.debug_mode:
+def attempt_to_fix_json_by_finding_outermost_brackets(json_string: str, cfg: Config):
+    if global_config.speak_mode and global_config.debug_mode:
         say_text(
             "I have received an invalid JSON response from the OpenAI API. "
             "Trying to fix it now."
@@ -162,17 +163,17 @@ def attempt_to_fix_json_by_finding_outermost_brackets(json_string: str):
             logger.typewriter_log(
                 title="Apparently json was fixed.", title_color=Fore.GREEN
             )
-            if CFG.speak_mode and CFG.debug_mode:
+            if global_config.speak_mode and global_config.debug_mode:
                 say_text("Apparently json was fixed.")
         else:
             return {}
 
     except (json.JSONDecodeError, ValueError):
-        if CFG.debug_mode:
+        if global_config.debug_mode:
             logger.error(f"Error: Invalid JSON: {json_string}\n")
-        if CFG.speak_mode:
+        if global_config.speak_mode:
             say_text("Didn't work. I will have to ignore this response then.")
         logger.error("Error: Invalid JSON, setting it to empty JSON now.\n")
         json_string = {}
 
-    return fix_and_parse_json(json_string)
+    return fix_and_parse_json(json_string, cfg)

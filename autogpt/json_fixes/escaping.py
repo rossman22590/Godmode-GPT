@@ -4,7 +4,7 @@ import json
 from autogpt.config import Config
 from autogpt.json_fixes.utilities import extract_char_position
 
-CFG = Config()
+global_config = Config()
 
 
 def fix_invalid_escape(json_to_load: str, error_message: str) -> str:
@@ -27,7 +27,7 @@ def fix_invalid_escape(json_to_load: str, error_message: str) -> str:
             json.loads(json_to_load)
             return json_to_load
         except json.JSONDecodeError as e:
-            if CFG.debug_mode:
+            if global_config.debug_mode:
                 print("json loads error - fix invalid escape", e)
             error_message = str(e)
     return json_to_load

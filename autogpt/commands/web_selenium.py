@@ -19,10 +19,10 @@ from pathlib import Path
 from autogpt.config import Config
 
 FILE_DIR = Path(__file__).parent.parent
-CFG = Config()
+global_config = Config()
 
 
-def browse_website(url: str, question: str) -> tuple[str, WebDriver]:
+def browse_website(url: str, question: str, cfg: Config) -> tuple[str, WebDriver]:
     """Browse a website and return the answer and links to the user
 
     Args:
@@ -34,7 +34,7 @@ def browse_website(url: str, question: str) -> tuple[str, WebDriver]:
     """
     driver, text = scrape_text_with_selenium(url)
     add_header(driver)
-    summary_text = summary.summarize_text(url, text, question, driver)
+    summary_text = summary.summarize_text(url, text, question, cfg, driver)
     links = scrape_links_with_selenium(driver, url)
 
     # Limit links to 5
@@ -61,16 +61,16 @@ def scrape_text_with_selenium(url: str) -> tuple[WebDriver, str]:
         "firefox": FirefoxOptions,
     }
 
-    options = options_available[CFG.selenium_web_browser]()
+    options = options_available[global_config.selenium_web_browser]()
     options.add_argument(
         "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.5615.49 Safari/537.36"
     )
 
-    if CFG.selenium_web_browser == "firefox":
+    if global_config.selenium_web_browser == "firefox":
         driver = webdriver.Firefox(
             executable_path=GeckoDriverManager().install(), options=options
         )
-    elif CFG.selenium_web_browser == "safari":
+    elif global_config.selenium_web_browser == "safari":
         # Requires a bit more setup on the users end
         # See https://developer.apple.com/documentation/webkit/testing_with_webdriver_in_safari
         driver = webdriver.Safari(options=options)

@@ -9,14 +9,14 @@ from autogpt.speech.gtts import GTTSVoice
 from autogpt.speech.eleven_labs import ElevenLabsSpeech
 
 
-CFG = Config()
+global_config = Config()
 DEFAULT_VOICE_ENGINE = GTTSVoice()
 VOICE_ENGINE = None
-if CFG.elevenlabs_api_key:
+if global_config.elevenlabs_api_key:
     VOICE_ENGINE = ElevenLabsSpeech()
-elif CFG.use_mac_os_tts == "True":
+elif global_config.use_mac_os_tts == "True":
     VOICE_ENGINE = MacOSTTS()
-elif CFG.use_brian_tts == "True":
+elif global_config.use_brian_tts == "True":
     VOICE_ENGINE = BrianSpeech()
 else:
     VOICE_ENGINE = GTTSVoice()
