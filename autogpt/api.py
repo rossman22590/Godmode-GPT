@@ -1,3 +1,4 @@
+import datetime
 from functools import wraps
 import json
 import logging
@@ -255,21 +256,35 @@ firebase_admin.initialize_app()
 def verify_firebase_token(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
+        user = None
+
+        id_token = request.headers.get("Authorization")
+        if id_token is not None:
+            try:
+                # Remove 'Bearer ' from the token if it's present
+                if id_token.startswith("Bearer "):
+                    id_token = id_token[7:]
+                decoded_token = firebase_auth.verify_id_token(id_token)
+                user = decoded_token
+            except ValueError as e:
+                return jsonify({"error": "Unauthorized", "message": str(e)}), 401
+            except Exception as e:
+                return jsonify({"error": "Unauthorized", "message": str(e)}), 401
+
+        openai_key = None
         try:
             request_data = request.get_json()
             if (
                 request_data.get("openai_key", None) is not None
                 and len(request_data.get("openai_key", "")) > 0
             ):
-                try:
-                    return f(*args, **kwargs)
-                except Exception as e:
-                    return e
+                openai_key = request_data.get("openai_key", None)
         except Exception as e:
             print(e)
 
-        id_token = request.headers.get("Authorization")
-        if not id_token:
+        request.user = user
+        
+        if not user and not openai_key:
             return (
                 jsonify(
                     {
@@ -279,17 +294,6 @@ def verify_firebase_token(f):
                 ),
                 401,
             )
-
-        try:
-            # Remove 'Bearer ' from the token if it's present
-            if id_token.startswith("Bearer "):
-                id_token = id_token[7:]
-            decoded_token = firebase_auth.verify_id_token(id_token)
-            request.user = decoded_token
-        except ValueError as e:
-            return jsonify({"error": "Unauthorized", "message": str(e)}), 401
-        except Exception as e:
-            return jsonify({"error": "Unauthorized", "message": str(e)}), 401
 
         return f(*args, **kwargs)
 
@@ -354,6 +358,21 @@ def godmode_main():
         message_history = request_data.get("message_history", [])
 
         agent_id = request_data["agent_id"]
+
+        if hasattr(request, "user"):
+            try:
+                print(request.user)
+                user_entity = datastore.Entity(key=client.key("User", request.user.get("user_id"), "Agents", agent_id))
+                user_entity.update(
+                    {
+                        "created": datetime.datetime.now(),
+                        "agent_id": agent_id,
+                    }
+                )
+                client.put(user_entity)
+            except Exception as e:
+                print(e)
+
 
         openai_key = request_data.get("openai_key", None)
         gpt_model = "gpt-3.5-turbo"
@@ -425,6 +444,24 @@ def api_files():
         
         files = get_file_urls(agent_id)
         return files
+    except Exception as e:
+        if isinstance(e, OpenAIError):
+            return e.error, 503
+
+        # dump stacktrace to console
+        print("api_files error", e)
+        traceback.print_exc()
+        raise e
+
+
+@app.route("/api/sessions", methods=["POST"]) # type: ignore
+@limiter.limit("16 per minute")
+@verify_firebase_token
+def sessions():
+    try:
+        print(request.user)
+        agents = datastore.Entity(key=client.key("User", request.user.get("user_id"), "Agents"))
+        print(agents.keys())
     except Exception as e:
         if isinstance(e, OpenAIError):
             return e.error, 503
