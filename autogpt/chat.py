@@ -83,15 +83,12 @@ def chat_with_ai(
 
             # logger.debug(f"Memory Stats: {permanent_memory.get_stats()}")
 
-            t0 = time.time()
             (
                 next_message_to_add_index,
                 current_tokens_used,
                 insertion_index,
                 current_context,
             ) = generate_context(prompt, relevant_memory, full_message_history, model)
-            t1 = time.time()
-            print(f"{cfg.agent_id} Time to generate context: {t1 - t0}")
 
             while current_tokens_used > 2500:
                 # remove memories until we are under 2500 tokens
@@ -104,14 +101,10 @@ def chat_with_ai(
                 ) = generate_context(
                     prompt, relevant_memory, full_message_history, model
                 )
-            t2 = time.time()
-            print(f"{cfg.agent_id} Time to prune memory: {t2 - t1}")
 
             current_tokens_used += token_counter.count_message_tokens(
                 [create_chat_message("user", user_input)], model
             )  # Account for user input (appended later)
-            t3 = time.time()
-            print(f"{cfg.agent_id} Time to count user input: {t3 - t2}")
 
             while next_message_to_add_index >= 0:
                 # print (f"CURRENT TOKENS USED: {current_tokens_used}")
@@ -134,8 +127,6 @@ def chat_with_ai(
 
                 # Move to the next most recent message in the full message history
                 next_message_to_add_index -= 1
-            t4 = time.time()
-            print(f"{cfg.agent_id} Time to add messages: {t4 - t3}")
 
             # Append user input, the length of this is accounted for above
             current_context.extend([create_chat_message("user", user_input)])
@@ -159,7 +150,6 @@ def chat_with_ai(
             #     logger.debug("")
             # logger.debug("----------- END OF CONTEXT ----------------")
 
-            t5 = time.time()
             # TODO: use a model defined elsewhere, so that model can contain
             # temperature and other settings we care about
             assistant_reply = create_chat_completion(
@@ -168,8 +158,6 @@ def chat_with_ai(
                 max_tokens=tokens_remaining,
                 cfg=cfg,
             )
-            t6 = time.time()
-            print(f"{cfg.agent_id} Time to create chat completion: {t6 - t5}")
 
             # Update full message history
             full_message_history.append(create_chat_message("user", user_input))
