@@ -263,8 +263,8 @@ class Agent:
         upload_log(ai_info + "\n\n" + memory_to_add + "\n\n" + godmode_log, self.agent_id)
 
         return (
-            str(self.command_name),
-            str(self.arguments),
+            self.command_name,
+            self.arguments,
             thoughts,
             self.full_message_history,
             self.assistant_reply,
