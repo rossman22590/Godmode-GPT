@@ -125,7 +125,7 @@ def execute_command(command_name: str, arguments, cfg: Config):
                 return google_result
                 safe_message = [google_result_single.encode('utf-8', 'ignore') for google_result_single in google_result]
             else:
-                return [google_result]
+                return google_result
                 safe_message = google_result.encode('utf-8', 'ignore')
 
             return str(safe_message)
