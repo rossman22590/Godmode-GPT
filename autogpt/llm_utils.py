@@ -46,7 +46,7 @@ def call_ai_function(
 def create_chat_completion(
     messages: List[Dict[str, str]],
     cfg,
-    model: str | None = None,
+    model: str | None = "gpt-3.5-turbo",
     temperature: float | None = None,
     max_tokens: int | None = None,
 ) -> str:
@@ -61,6 +61,9 @@ def create_chat_completion(
     Returns:
         str: The response from the chat completion
     """
+    if model is None:
+        model = "gpt-3.5-turbo"
+    t0 = time.time()
     if temperature is None:
         temperature = cfg.temperature
     response = None
@@ -112,6 +115,8 @@ def create_chat_completion(
         time.sleep(backoff)
     if response is None:
         raise RuntimeError(f"Failed to get response after {num_retries} retries")
+    
+    print(f"CHAT COMPLETION TOOK {time.time() - t0} SECONDS", model)
 
     return response.choices[0].message["content"] # type: ignore
 
