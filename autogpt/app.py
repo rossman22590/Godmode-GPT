@@ -20,7 +20,6 @@ from autogpt.commands.file_operations import (
 )
 from autogpt.memory import get_memory
 from autogpt.processing.text import summarize_text
-from autogpt.commands.web_selenium import browse_website
 from autogpt.commands.git_operations import clone_repository
 from autogpt.commands.twitter import send_tweet
 

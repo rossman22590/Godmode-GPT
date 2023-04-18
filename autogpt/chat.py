@@ -46,7 +46,6 @@ def generate_context(prompt, relevant_memory, full_message_history, model):
     )
 
 
-# TODO: Change debug from hardcode to argument
 def chat_with_ai(
     prompt, user_input, full_message_history, permanent_memory, token_limit, cfg: Config
 ):
@@ -73,7 +72,7 @@ def chat_with_ai(
             model = cfg.fast_llm_model  # TODO: Change model from hardcode to argument
             # Reserve 1000 tokens for the response
 
-            logger.debug(f"Token limit: {token_limit}")
+            # logger.debug(f"Token limit: {token_limit}")
             send_token_limit = token_limit - 1000
 
             relevant_memory = (
@@ -82,14 +81,17 @@ def chat_with_ai(
                 else permanent_memory.get_relevant(str(full_message_history[-9:]), 10)
             )
 
-            logger.debug(f"Memory Stats: {permanent_memory.get_stats()}")
+            # logger.debug(f"Memory Stats: {permanent_memory.get_stats()}")
 
+            t0 = time.time()
             (
                 next_message_to_add_index,
                 current_tokens_used,
                 insertion_index,
                 current_context,
             ) = generate_context(prompt, relevant_memory, full_message_history, model)
+            t1 = time.time()
+            print(f"{cfg.agent_id} Time to generate context: {t1 - t0}")
 
             while current_tokens_used > 2500:
                 # remove memories until we are under 2500 tokens
@@ -102,10 +104,14 @@ def chat_with_ai(
                 ) = generate_context(
                     prompt, relevant_memory, full_message_history, model
                 )
+            t2 = time.time()
+            print(f"{cfg.agent_id} Time to prune memory: {t2 - t1}")
 
             current_tokens_used += token_counter.count_message_tokens(
                 [create_chat_message("user", user_input)], model
             )  # Account for user input (appended later)
+            t3 = time.time()
+            print(f"{cfg.agent_id} Time to count user input: {t3 - t2}")
 
             while next_message_to_add_index >= 0:
                 # print (f"CURRENT TOKENS USED: {current_tokens_used}")
@@ -128,6 +134,8 @@ def chat_with_ai(
 
                 # Move to the next most recent message in the full message history
                 next_message_to_add_index -= 1
+            t4 = time.time()
+            print(f"{cfg.agent_id} Time to add messages: {t4 - t3}")
 
             # Append user input, the length of this is accounted for above
             current_context.extend([create_chat_message("user", user_input)])
@@ -139,18 +147,19 @@ def chat_with_ai(
             #  https://www.github.com/Torantulino/Auto-GPT"
 
             # Debug print the current context
-            logger.debug(f"Token limit: {token_limit}")
-            logger.debug(f"Send Token Count: {current_tokens_used}")
-            logger.debug(f"Tokens remaining for response: {tokens_remaining}")
-            logger.debug("------------ CONTEXT SENT TO AI ---------------")
-            for message in current_context:
-                # Skip printing the prompt
-                if message["role"] == "system" and message["content"] == prompt:
-                    continue
-                logger.debug(f"{message['role'].capitalize()}: {message['content']}")
-                logger.debug("")
-            logger.debug("----------- END OF CONTEXT ----------------")
+            # logger.debug(f"Token limit: {token_limit}")
+            # logger.debug(f"Send Token Count: {current_tokens_used}")
+            # logger.debug(f"Tokens remaining for response: {tokens_remaining}")
+            # logger.debug("------------ CONTEXT SENT TO AI ---------------")
+            # for message in current_context:
+            #     # Skip printing the prompt
+            #     if message["role"] == "system" and message["content"] == prompt:
+            #         continue
+            #     logger.debug(f"{message['role'].capitalize()}: {message['content']}")
+            #     logger.debug("")
+            # logger.debug("----------- END OF CONTEXT ----------------")
 
+            t5 = time.time()
             # TODO: use a model defined elsewhere, so that model can contain
             # temperature and other settings we care about
             assistant_reply = create_chat_completion(
@@ -159,6 +168,8 @@ def chat_with_ai(
                 max_tokens=tokens_remaining,
                 cfg=cfg,
             )
+            t6 = time.time()
+            print(f"{cfg.agent_id} Time to create chat completion: {t6 - t5}")
 
             # Update full message history
             full_message_history.append(create_chat_message("user", user_input))
@@ -170,4 +181,4 @@ def chat_with_ai(
         except RateLimitError:
             # TODO: When we switch to langchain, this is built in
             print("Error: ", "API Rate Limit Reached. Waiting 10 seconds...")
-            time.sleep(10)
+            # time.sleep(10)

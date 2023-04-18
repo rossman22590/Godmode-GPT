@@ -1,5 +1,8 @@
 import time
 from google.cloud import storage
+from autogpt import chat
+
+from autogpt.llm_utils import create_chat_completion
 
 private_bucket_name = "godmode-ai"
 public_bucket_name = "godmode-public"
@@ -43,3 +46,32 @@ def list_files(agent_id: str):
 def get_file_urls(agent_id: str):
     blobs = client.list_blobs(public_bucket_name, prefix=f"godmode-files/{agent_id}/")
     return [file.public_url for file in blobs]
+
+def generate_task_name(cfg, command_name:str, arguments:str):
+    try:
+        task_name = create_chat_completion(
+            [
+                chat.create_chat_message(
+                    "system",
+                    "You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2021-09\nCurrent date: 2023-03-26",
+                ),
+                chat.create_chat_message(
+                    "user",
+                    'Describe this action as succinctly as possible in one short sentence:\n\n```\nCOMMAND: browse_website\nARGS: {\n  "url": "https://www.amazon.com/",\n  "question": "What are the current top products in the Smart Home Device category?"\n}\n```',
+                ),
+                chat.create_chat_message(
+                    "assistant", "Find top Smart Home Device products on Amazon.com."
+                ),
+                chat.create_chat_message(
+                    "user",
+                    f"Describe this action as succinctly as possible in one short sentence:\n\n```\nCOMMAND: {command_name}\nARGS: {arguments}\n```",
+                ),
+            ],
+            model="gpt-3.5-turbo",
+            temperature=0.2,
+            cfg=cfg,
+        )
+        return task_name
+    except Exception as e:
+        print(e)
+    return None

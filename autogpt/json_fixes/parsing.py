@@ -176,4 +176,4 @@ def attempt_to_fix_json_by_finding_outermost_brackets(json_string: str, cfg: Con
         logger.error("Error: Invalid JSON, setting it to empty JSON now.\n")
         json_string = {}
 
-    return fix_and_parse_json(json_string, cfg)
+    return fix_and_parse_json(json_string, cfg, False)

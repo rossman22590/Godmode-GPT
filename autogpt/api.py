@@ -13,7 +13,7 @@ from openai.error import OpenAIError
 import firebase_admin
 from firebase_admin import auth as firebase_auth
 from autogpt.llm_utils import create_chat_completion
-from autogpt.api_utils import get_file_urls
+from autogpt.api_utils import generate_task_name, get_file_urls
 import logging
 from autogpt.agent.agent import Agent
 
@@ -36,9 +36,9 @@ def new_interact(
     memory: PineconeMemory,
     command_name: str,
     arguments: str,
-    assistant_reply: str, # TODO: fetch from Datastore
+    assistant_reply: str,  # TODO: fetch from Datastore
     agent_id: str,
-    full_message_history=[], # TODO: fetch from Datastore
+    full_message_history=[],  # TODO: fetch from Datastore
 ):
     key = client.key("Agent", agent_id)
 
@@ -54,22 +54,25 @@ def new_interact(
     )
     # Initialize memory and make sure it is empty.
     # this is particularly important for indexing and referencing pinecone memory
+    t0 = time.time()
     agent = Agent(
-        ai_name=ai_config.ai_name,  # save
-        ai_role=ai_config.ai_role,  # save
-        ai_goals=ai_config.ai_goals,  # save
-        agent_id=agent_id,  # save
-        full_message_history=full_message_history,  # save
-        command_name=command_name,  # save
-        arguments=arguments,  # save
-        assistant_reply=assistant_reply,  # save
-        agents={},  # save
+        ai_name=ai_config.ai_name,
+        ai_role=ai_config.ai_role,
+        ai_goals=ai_config.ai_goals,
+        agent_id=agent_id,
+        full_message_history=full_message_history,
+        command_name=command_name,
+        arguments=arguments,
+        assistant_reply=assistant_reply,
+        agents={},
         triggering_prompt=triggering_prompt,
         system_prompt=system_prompt,
         memory=memory,
         next_action_count=next_action_count,
         cfg=cfg,
     )
+    t1 = time.time()
+    print("Agent init time:", t1 - t0)
 
     (
         command_name,
@@ -82,35 +85,13 @@ def new_interact(
         command_name=command_name,
         arguments=arguments,
     )
+    t2 = time.time()
+    print("Agent single step time:", t2 - t1)
 
     # generate simplified task name
-    task_name = None
-    try:
-        task_name = create_chat_completion(
-            [
-                chat.create_chat_message(
-                    "system",
-                    "You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2021-09\nCurrent date: 2023-03-26",
-                ),
-                chat.create_chat_message(
-                    "user",
-                    'Describe this action as succinctly as possible in one short sentence:\n\n```\nCOMMAND: browse_website\nARGS: {\n  "url": "https://www.amazon.com/",\n  "question": "What are the current top products in the Smart Home Device category?"\n}\n```',
-                ),
-                chat.create_chat_message(
-                    "assistant", "Find top Smart Home Device products on Amazon.com."
-                ),
-                chat.create_chat_message(
-                    "user",
-                    f"Describe this action as succinctly as possible in one short sentence:\n\n```\nCOMMAND: {command_name}\nARGS: {arguments}\n```",
-                ),
-            ],
-            model="gpt-3.5-turbo",
-            temperature=0.2,
-            cfg=cfg,
-        )
-    except Exception as e:
-        print(e)
+    task_name = generate_task_name(cfg, command_name, arguments)
 
+    t3 = time.time()
     try:
         entity = datastore.Entity(
             key=key,
@@ -162,6 +143,8 @@ def new_interact(
         client.put(entity)
     except Exception as e:
         print("DATASTORE FAILED:", e)
+    t4 = time.time()
+    print("Datastore time:", t4 - t3)
 
     return (
         command_name,
@@ -358,7 +341,7 @@ def subgoals():
     )
 
 
-@app.route("/api/v2", methods=["POST"])  # type: ignore
+@app.route("/api", methods=["POST"])  # type: ignore
 @limiter.limit(make_rate_limit("500 per day;200 per hour;8 per minute"))
 @verify_firebase_token
 def godmode_main():
@@ -416,6 +399,7 @@ def godmode_main():
             ai_goals=ai_goals,
         )
 
+        t0 = time.time()
         (
             command_name,
             arguments,
@@ -434,6 +418,7 @@ def godmode_main():
             agent_id=agent_id,
             full_message_history=message_history,
         )
+        print("new_interact took", time.time() - t0)
     except Exception as e:
         if isinstance(e, OpenAIError):
             return e.error, 503

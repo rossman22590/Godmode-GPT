@@ -15,8 +15,6 @@ pinecone-client==2.2.1
 redis
 orjson
 Pillow
-selenium
-webdriver-manager
 coverage
 numpy
 gitpython==3.1.31

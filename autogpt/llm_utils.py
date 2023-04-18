@@ -67,7 +67,7 @@ def create_chat_completion(
     if temperature is None:
         temperature = cfg.temperature
     response = None
-    num_retries = 10
+    num_retries = 1
     if cfg.debug_mode:
         print(
             Fore.GREEN
@@ -112,7 +112,7 @@ def create_chat_completion(
                 Fore.RED + "Error: ",
                 f"API Bad gateway. Waiting {backoff} seconds..." + Fore.RESET,
             )
-        time.sleep(backoff)
+        # time.sleep(backoff)
     if response is None:
         raise RuntimeError(f"Failed to get response after {num_retries} retries")
     
@@ -154,4 +154,4 @@ def create_embedding_with_ada(text: str, cfg: Config) -> Optional[List]:
                 Fore.RED + "Error: ",
                 f"API Bad gateway. Waiting {backoff} seconds..." + Fore.RESET,
             )
-        time.sleep(backoff)
+        # time.sleep(backoff)

@@ -46,6 +46,7 @@ def download_file(url, filename):
         url (str): URL of the file to download
         filename (str): Filename to save the file as
     """
+    return
     safe_filename = path_in_workspace(filename)
     try:
         message = f"{Fore.YELLOW}Downloading file from {Back.LIGHTBLUE_EX}{url}{Back.RESET}{Fore.RESET}"

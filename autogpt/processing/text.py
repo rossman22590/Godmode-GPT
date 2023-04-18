@@ -1,6 +1,6 @@
 """Text processing functions"""
 from typing import Generator, Optional, Dict
-from selenium.webdriver.remote.webdriver import WebDriver
+# from selenium.webdriver.remote.webdriver import WebDriver
 from autogpt.memory import get_memory
 from autogpt.config import Config
 from autogpt.llm_utils import create_chat_completion
@@ -36,7 +36,7 @@ def split_text(text: str, max_length: int = 8192) -> Generator[str, None, None]:
 
 
 def summarize_text(
-    url: str, text: str, question: str, cfg: Config, driver: Optional[WebDriver] = None
+    url: str, text: str, question: str, cfg: Config, driver: None = None
 ) -> str:
     """Summarize text using the OpenAI API
 
@@ -60,8 +60,8 @@ def summarize_text(
     scroll_ratio = 1 / len(chunks)
 
     for i, chunk in enumerate(chunks):
-        if driver:
-            scroll_to_percentage(driver, scroll_ratio * i)
+        # if driver:
+        #     scroll_to_percentage(driver, scroll_ratio * i)
         print(f"Adding chunk {i + 1} / {len(chunks)} to memory")
 
         memory_to_add = f"Source: {url}\n" f"Raw content part#{i + 1}: {chunk}"
@@ -98,19 +98,19 @@ def summarize_text(
     )
 
 
-def scroll_to_percentage(driver: WebDriver, ratio: float) -> None:
-    """Scroll to a percentage of the page
+# def scroll_to_percentage(driver: WebDriver, ratio: float) -> None:
+#     """Scroll to a percentage of the page
 
-    Args:
-        driver (WebDriver): The webdriver to use
-        ratio (float): The percentage to scroll to
+#     Args:
+#         driver (WebDriver): The webdriver to use
+#         ratio (float): The percentage to scroll to
 
-    Raises:
-        ValueError: If the ratio is not between 0 and 1
-    """
-    if ratio < 0 or ratio > 1:
-        raise ValueError("Percentage should be between 0 and 1")
-    driver.execute_script(f"window.scrollTo(0, document.body.scrollHeight * {ratio});")
+#     Raises:
+#         ValueError: If the ratio is not between 0 and 1
+#     """
+#     if ratio < 0 or ratio > 1:
+#         raise ValueError("Percentage should be between 0 and 1")
+#     driver.execute_script(f"window.scrollTo(0, document.body.scrollHeight * {ratio});")
 
 
 def create_message(chunk: str, question: str) -> Dict[str, str]:

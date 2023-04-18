@@ -1,3 +1,4 @@
+import time
 from colorama import Fore, Style
 from autogpt.agent_manager import AgentManager
 from autogpt.api_utils import upload_log
@@ -182,6 +183,7 @@ class Agent:
                 )
 
     def single_step(self, command_name: str, arguments: str):
+        ft0 = time.time()
         # Send message to AI, get response
         self.user_input = (
             self.arguments if command_name == "human_feedback" else "GENERATE NEXT COMMAND JSON"
@@ -215,7 +217,10 @@ class Agent:
             f"\nHuman Feedback: {self.user_input} "
         )
 
+        t0 = time.time()
         self.memory.add(memory_to_add)
+        t1 = time.time()
+        print(f"{self.cfg.agent_id}: Memory add time: {t1-t0} {t1-t0}")
 
         # Check if there's a result from the command append it to the message
         # history
@@ -229,7 +234,10 @@ class Agent:
             godmode_log += logger.typewriter_log(
                 "SYSTEM: ", Fore.YELLOW, "Unable to execute command"
             )
+        ft1 = time.time()
+        print(f"{self.cfg.agent_id}: First half: {ft1-ft0} {ft1-t0}")
         
+        t2 = time.time()
         self.assistant_reply = chat_with_ai(
             self.system_prompt,
             self.triggering_prompt,
@@ -238,11 +246,17 @@ class Agent:
             self.cfg.fast_token_limit,
             self.cfg,
         )
+        t3 = time.time()
+        print(f"{self.cfg.agent_id}: Chat with AI time: {t3-t2} {t3-t0}")
 
+        t4 = time.time()
         self.assistant_reply_json = fix_json_using_multiple_techniques(self.assistant_reply, self.cfg)
+        t5 = time.time()
+        print(f"{self.cfg.agent_id}: Fix json time: {t5-t4} {t5-t0}")
 
         thoughts = {}
         
+        t6 = time.time()
         # Print Assistant thoughts
         if self.assistant_reply_json != {}:
             # validate_json(self.assistant_reply_json, 'llm_response_format_1')
@@ -255,12 +269,24 @@ class Agent:
                 # command_name, arguments = assistant_reply_json_valid["command"]["name"], assistant_reply_json_valid["command"]["args"]
             except Exception as e:
                 godmode_log += "Error: \n" + str(e)
+        t7 = time.time()
+        print(f"{self.cfg.agent_id}: Print assistant thoughts time: {t7-t6} {t7-t0}")
         
+        t71 = time.time()
         # upload log
         ai_info = f"You are {self.ai_name}, {self.ai_role}\nGOALS:\n\n"
         for i, goal in enumerate(self.ai_goals):
             ai_info += f"{i+1}. {goal}\n"
+        t72 = time.time()
+        print(f"{self.cfg.agent_id}: Some shit time: {t72-t71} {t72-t0}")
+
+        t8 = time.time()
         upload_log(ai_info + "\n\n" + memory_to_add + "\n\n" + godmode_log, self.agent_id)
+        t9 = time.time()
+        print(f"{self.cfg.agent_id}: Upload log time: {t9-t8} {t9-t0}")
+
+        ft2 = time.time()
+        print(f"{self.cfg.agent_id}: Second half: {ft2-ft1} {ft2-t0}")
 
         return (
             self.command_name,
