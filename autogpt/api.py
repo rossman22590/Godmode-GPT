@@ -258,7 +258,8 @@ def subgoals():
     request_data = request.get_json()
 
     goal = request_data["goal"]
-    openai_key = request_data.get("openai_key", None)
+    cfg = Config()
+    cfg.openai_api_key = request_data.get("openai_key", None)
 
     subgoals = []
     try:
@@ -278,7 +279,7 @@ def subgoals():
             model="gpt-3.5-turbo",
             temperature=0.2,
             max_tokens=150,
-            cfg=global_config,
+            cfg=cfg,
         )
     except Exception as e:
         if isinstance(e, OpenAIError):

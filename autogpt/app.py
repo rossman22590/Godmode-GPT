@@ -158,11 +158,18 @@ def execute_command(command_name: str, arguments, cfg: Config):
         elif command_name == "search_files":
             return search_files(arguments["directory"])
         elif command_name == "download_file":
+            links = get_hyperlinks(arguments["url"])
+            
+            # if links is array
+            if isinstance(links, list):
+                links = "\n".join(links)
+                
+            return get_text_summary(arguments["url"], arguments["question"], cfg) + "\n\nLinks:\n" + links
             if not cfg.allow_downloads:
                 return "Error: You do not have user authorization to download files locally."
             return download_file(arguments["url"], arguments["file"])
         elif command_name == "browse_website":
-            return browse_website(arguments["url"], arguments["question"], cfg)
+            # return browse_website(arguments["url"], arguments["question"], cfg)
         # TODO: Change these to take in a file rather than pasted code, if
         # non-file is given, return instructions "Input should be a python
         # filepath, write your code to file and try again"
@@ -183,16 +190,16 @@ def execute_command(command_name: str, arguments, cfg: Config):
                     " shell commands, EXECUTE_LOCAL_COMMANDS must be set to 'True' "
                     "in your config. Do not attempt to bypass the restriction."
                 )
-        elif command_name == "read_audio_from_file":
-            return read_audio_from_file(arguments["file"])
-        elif command_name == "generate_image":
-            return generate_image(arguments["prompt"])
-        elif command_name == "send_tweet":
-            return send_tweet(arguments["text"])
+        # elif command_name == "read_audio_from_file":
+        #     return read_audio_from_file(arguments["file"])
+        # elif command_name == "generate_image":
+        #     return generate_image(arguments["prompt"])
+        # elif command_name == "send_tweet":
+        #     return send_tweet(arguments["text"])
         elif command_name == "do_nothing":
             return "No action performed."
         elif command_name == "task_complete":
-            shutdown()
+            return "Task complete."
         else:
             return (
                 f"Unknown command '{command_name}'. Please refer to the 'COMMANDS'"
