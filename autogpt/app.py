@@ -158,6 +158,10 @@ def execute_command(command_name: str, arguments, cfg: Config):
         elif command_name == "search_files":
             return search_files(arguments["directory"])
         elif command_name == "download_file":
+            if not cfg.allow_downloads:
+                return "Error: You do not have user authorization to download files locally."
+            return download_file(arguments["url"], arguments["file"])
+        elif command_name == "browse_website":
             links = get_hyperlinks(arguments["url"])
             
             # if links is array
@@ -165,10 +169,6 @@ def execute_command(command_name: str, arguments, cfg: Config):
                 links = "\n".join(links)
                 
             return get_text_summary(arguments["url"], arguments["question"], cfg) + "\n\nLinks:\n" + links
-            if not cfg.allow_downloads:
-                return "Error: You do not have user authorization to download files locally."
-            return download_file(arguments["url"], arguments["file"])
-        elif command_name == "browse_website":
             # return browse_website(arguments["url"], arguments["question"], cfg)
         # TODO: Change these to take in a file rather than pasted code, if
         # non-file is given, return instructions "Input should be a python
