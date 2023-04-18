@@ -54,7 +54,6 @@ def new_interact(
     )
     # Initialize memory and make sure it is empty.
     # this is particularly important for indexing and referencing pinecone memory
-    t0 = time.time()
     agent = Agent(
         ai_name=ai_config.ai_name,
         ai_role=ai_config.ai_role,
@@ -71,8 +70,6 @@ def new_interact(
         next_action_count=next_action_count,
         cfg=cfg,
     )
-    t1 = time.time()
-    print("Agent init time:", t1 - t0)
 
     (
         command_name,
@@ -85,13 +82,10 @@ def new_interact(
         command_name=command_name,
         arguments=arguments,
     )
-    t2 = time.time()
-    print("Agent single step time:", t2 - t1)
 
     # generate simplified task name
     task_name = generate_task_name(cfg, command_name, arguments)
 
-    t3 = time.time()
     try:
         entity = datastore.Entity(
             key=key,
@@ -143,8 +137,6 @@ def new_interact(
         client.put(entity)
     except Exception as e:
         print("DATASTORE FAILED:", e)
-    t4 = time.time()
-    print("Datastore time:", t4 - t3)
 
     return (
         command_name,
@@ -399,7 +391,6 @@ def godmode_main():
             ai_goals=ai_goals,
         )
 
-        t0 = time.time()
         (
             command_name,
             arguments,
@@ -418,7 +409,6 @@ def godmode_main():
             agent_id=agent_id,
             full_message_history=message_history,
         )
-        print("new_interact took", time.time() - t0)
     except Exception as e:
         if isinstance(e, OpenAIError):
             return e.error, 503
