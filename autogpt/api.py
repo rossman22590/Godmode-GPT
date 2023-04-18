@@ -29,15 +29,16 @@ global_config = Config()
 
 START = "###start###"
 
+
 def new_interact(
     cfg: Config,
     ai_config: AIConfig,
     memory: PineconeMemory,
     command_name: str,
     arguments: str,
-    assistant_reply: str,
+    assistant_reply: str, # TODO: fetch from Datastore
     agent_id: str,
-    full_message_history=[],
+    full_message_history=[], # TODO: fetch from Datastore
 ):
     key = client.key("Agent", agent_id)
 
@@ -45,7 +46,6 @@ def new_interact(
     system_prompt = ai_config.construct_full_prompt()
     # print(prompt)
     # Initialize variables
-    full_message_history = []
     next_action_count = 0
     # Make a constant:
     triggering_prompt = (
@@ -55,15 +55,15 @@ def new_interact(
     # Initialize memory and make sure it is empty.
     # this is particularly important for indexing and referencing pinecone memory
     agent = Agent(
-        ai_name=ai_config.ai_name, # save
-        ai_role=ai_config.ai_role, # save 
-        ai_goals=ai_config.ai_goals, # save
-        agent_id=agent_id, # save
-        full_message_history=full_message_history, # save
-        command_name=command_name, # save
-        arguments=arguments, # save
-        assistant_reply=assistant_reply, # save
-        agents={}, # save
+        ai_name=ai_config.ai_name,  # save
+        ai_role=ai_config.ai_role,  # save
+        ai_goals=ai_config.ai_goals,  # save
+        agent_id=agent_id,  # save
+        full_message_history=full_message_history,  # save
+        command_name=command_name,  # save
+        arguments=arguments,  # save
+        assistant_reply=assistant_reply,  # save
+        agents={},  # save
         triggering_prompt=triggering_prompt,
         system_prompt=system_prompt,
         memory=memory,
@@ -112,7 +112,17 @@ def new_interact(
         print(e)
 
     try:
-        entity = datastore.Entity(key=key, exclude_from_indexes=('full_message_history', 'agents', 'assistant_reply', 'arguments', 'command_name', 'tasks'))
+        entity = datastore.Entity(
+            key=key,
+            exclude_from_indexes=(
+                "full_message_history",
+                "agents",
+                "assistant_reply",
+                "arguments",
+                "command_name",
+                "tasks",
+            ),
+        )
 
         prev = client.get(key) or {}
         tasks = prev.get("tasks", [])
@@ -120,30 +130,34 @@ def new_interact(
         if len(tasks) > 0:
             lastTask: datastore.Entity = tasks[-1]
             lastTask.update({"result": result})
-        
-        task = datastore.Entity(exclude_from_indexes=('result',))
-        task.update({
-            "command_name": command_name,
-            "arguments": json.dumps(arguments),
-            "result": None,
-            "task_name": task_name,
-        })
+
+        task = datastore.Entity(exclude_from_indexes=("result",))
+        task.update(
+            {
+                "command_name": command_name,
+                "arguments": json.dumps(arguments),
+                "result": None,
+                "task_name": task_name,
+            }
+        )
         tasks.append(task)
 
-        entity.update({
-            "ai_name": agent.ai_name,
-            "ai_role": agent.ai_role,
-            "ai_goals": agent.ai_goals,
-            "agent_id": agent.agent_id,
-            "full_message_history": json.dumps(agent.full_message_history),
-            "full_message_history": [],
-            "command_name": agent.command_name,
-            "arguments": agent.arguments,
-            "assistant_reply": json.dumps(agent.assistant_reply),
-            "assistant_reply": "",
-            "agents": agent.agent_manager.agents,
-            "tasks": tasks,
-        })
+        entity.update(
+            {
+                "ai_name": agent.ai_name,
+                "ai_role": agent.ai_role,
+                "ai_goals": agent.ai_goals,
+                "agent_id": agent.agent_id,
+                "full_message_history": json.dumps(agent.full_message_history),
+                "full_message_history": [],
+                "command_name": agent.command_name,
+                "arguments": agent.arguments,
+                "assistant_reply": json.dumps(agent.assistant_reply),
+                "assistant_reply": "",
+                "agents": agent.agent_manager.agents,
+                "tasks": tasks,
+            }
+        )
         client.put(entity)
     except Exception as e:
         print("DATASTORE FAILED:", e)
@@ -180,12 +194,13 @@ from flask_limiter import Limiter
 
 app = Flask(__name__)
 
+
 def get_remote_address() -> str:
     return (
         request.environ.get("HTTP_X_FORWARDED_FOR")
         or request.environ.get("REMOTE_ADDR")
         or request.remote_addr
-    ) # type: ignore
+    )  # type: ignore
 
 
 if global_config.redis_host is None:
@@ -282,8 +297,9 @@ def verify_firebase_token(f):
         except Exception as e:
             print(e)
 
-        request.user = user
-        
+        if user:
+            request.user = user
+
         if not user and not openai_key:
             return (
                 jsonify(
@@ -300,7 +316,7 @@ def verify_firebase_token(f):
     return wrapper
 
 
-@app.route("/api-goal-subgoals", methods=["POST"]) # type: ignore
+@app.route("/api-goal-subgoals", methods=["POST"])  # type: ignore
 @limiter.limit(make_rate_limit("100 per day;60 per hour;15 per minute"))
 @verify_firebase_token
 def subgoals():
@@ -341,7 +357,7 @@ def subgoals():
     )
 
 
-@app.route("/api/v2", methods=["POST"]) # type: ignore
+@app.route("/api/v2", methods=["POST"])  # type: ignore
 @limiter.limit(make_rate_limit("500 per day;200 per hour;8 per minute"))
 @verify_firebase_token
 def godmode_main():
@@ -362,17 +378,22 @@ def godmode_main():
         if hasattr(request, "user"):
             try:
                 print(request.user)
-                user_entity = datastore.Entity(key=client.key("User", request.user.get("user_id"), "Agents", agent_id))
+                user_entity = datastore.Entity(
+                    key=client.key(
+                        "User", request.user.get("user_id"), "Agents", agent_id
+                    )
+                )
                 user_entity.update(
                     {
                         "created": datetime.datetime.now(),
                         "agent_id": agent_id,
+                        "ai_name": ai_name,
+                        "ai_role": ai_description,
                     }
                 )
                 client.put(user_entity)
             except Exception as e:
                 print(e)
-
 
         openai_key = request_data.get("openai_key", None)
         gpt_model = "gpt-3.5-turbo"
@@ -386,7 +407,7 @@ def godmode_main():
         cfg.smart_llm_model = gpt_model
         cfg.agent_id = agent_id
 
-        memory: PineconeMemory = get_memory(cfg) # type: ignore
+        memory: PineconeMemory = get_memory(cfg)  # type: ignore
 
         ai_config = AIConfig(
             ai_name=ai_name,
@@ -434,14 +455,14 @@ def godmode_main():
     )
 
 
-@app.route("/api/files", methods=["POST"]) # type: ignore
+@app.route("/api/files", methods=["POST"])  # type: ignore
 @limiter.limit("32 per minute")
 # @verify_firebase_token
 def api_files():
     try:
         request_data = request.get_json()
         agent_id = request_data["agent_id"]
-        
+
         files = get_file_urls(agent_id)
         return files
     except Exception as e:
@@ -454,14 +475,54 @@ def api_files():
         raise e
 
 
-@app.route("/api/sessions", methods=["POST"]) # type: ignore
+@app.route("/api/sessions", methods=["POST"])  # type: ignore
 @limiter.limit("16 per minute")
 @verify_firebase_token
 def sessions():
     try:
-        print(request.user)
-        agents = datastore.Entity(key=client.key("User", request.user.get("user_id"), "Agents"))
-        print(agents.keys())
+        kind = "Agents"
+        ancestor_key = client.key("User", request.user.get("user_id"))
+
+        # Create a query object with the ancestor filter
+        query = client.query(kind=kind, ancestor=ancestor_key)
+        results = list(query.fetch())
+        return json.dumps(
+            {
+                "sessions": [
+                    {
+                        "agent_id": r.get("agent_id", ""),
+                        "ai_name": r.get("ai_name", ""),
+                        "ai_role": r.get("ai_role", ""),
+                    }
+                    for r in results
+                ],
+            }
+        )
+
+    except Exception as e:
+        if isinstance(e, OpenAIError):
+            return e.error, 503
+
+        # dump stacktrace to console
+        print("api_files error", e)
+        traceback.print_exc()
+        raise e
+
+
+@app.route("/api/sessions/<agent_id>", methods=["GET"])  # type: ignore
+@limiter.limit("16 per minute")
+@verify_firebase_token
+def session(agent_id):
+    try:
+        ancestor_key = client.key("Agent", agent_id)
+        entity = client.get(key=ancestor_key)
+
+        return json.dumps(
+            {
+                "session": entity,
+            }
+        )
+
     except Exception as e:
         if isinstance(e, OpenAIError):
             return e.error, 503
