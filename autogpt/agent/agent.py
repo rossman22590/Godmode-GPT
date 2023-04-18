@@ -230,7 +230,7 @@ class Agent:
                 "SYSTEM: ", Fore.YELLOW, "Unable to execute command"
             )
         
-        assistant_reply = chat_with_ai(
+        self.assistant_reply = chat_with_ai(
             self.system_prompt,
             self.triggering_prompt,
             self.full_message_history,
@@ -239,7 +239,7 @@ class Agent:
             self.cfg,
         )
 
-        self.assistant_reply_json = fix_json_using_multiple_techniques(assistant_reply, self.cfg)
+        self.assistant_reply_json = fix_json_using_multiple_techniques(self.assistant_reply, self.cfg)
 
         thoughts = {}
         
@@ -267,7 +267,7 @@ class Agent:
             arguments,
             thoughts,
             self.full_message_history,
-            assistant_reply,
+            self.assistant_reply,
             result,
         )
 
