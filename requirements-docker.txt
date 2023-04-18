@@ -25,6 +25,7 @@ jsonschema
 flask
 google-cloud-firestore
 google-cloud-storage
+google-cloud-datastore
 gunicorn
 Flask-Limiter==3.3.0
 firebase-admin

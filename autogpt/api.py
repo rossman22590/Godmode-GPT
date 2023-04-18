@@ -12,14 +12,17 @@ from openai.error import OpenAIError
 import firebase_admin
 from firebase_admin import auth as firebase_auth
 from autogpt.llm_utils import create_chat_completion
-from autogpt.api_utils import upload_log, get_file_urls
+from autogpt.api_utils import get_file_urls
 import logging
 from autogpt.agent.agent import Agent
 
 from autogpt.config import Config
-from autogpt.logs import logger, print_assistant_thoughts
+from autogpt.logs import logger
 from autogpt.memory import get_memory
 from autogpt.memory.pinecone import PineconeMemory
+from google.cloud import datastore
+
+client = datastore.Client()
 
 global_config = Config()
 
@@ -35,6 +38,9 @@ def new_interact(
     agent_id: str,
     full_message_history=[],
 ):
+    task = datastore.Entity(key=client.key("Task"))
+    key = client.key("Agent", agent_id)
+
     logger.set_level(logging.DEBUG if cfg.debug_mode else logging.INFO)
     system_prompt = ai_config.construct_full_prompt()
     # print(prompt)
@@ -76,6 +82,19 @@ def new_interact(
         command_name=command_name,
         arguments=arguments,
     )
+    entity = datastore.Entity(key=key)
+    entity.update({
+        "ai_name": agent.ai_name,
+        "ai_role": agent.ai_role,
+        "ai_goals": agent.ai_goals,
+        "agent_id": agent.agent_id,
+        "full_message_history": agent.full_message_history,
+        "command_name": agent.command_name,
+        "arguments": agent.arguments,
+        "assistant_reply": agent.assistant_reply,
+        "agents": agent.agent_manager.agents,
+    })
+    client.put(entity)
 
     # generate simplified task name
     task = None
@@ -319,7 +338,6 @@ def godmode_main():
 
         cfg = Config()
         cfg.openai_api_key = openai_key
-        cfg.fast_llm_model = gpt_model
         cfg.smart_llm_model = gpt_model
         cfg.agent_id = agent_id
 
