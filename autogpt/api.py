@@ -118,6 +118,7 @@ def new_interact(
                 "full_message_history",
                 "agents",
                 "assistant_reply",
+                "thoughts",
                 "arguments",
                 "command_name",
                 "tasks",
@@ -138,6 +139,7 @@ def new_interact(
                 "arguments": json.dumps(arguments),
                 "result": None,
                 "task_name": task_name,
+                "relevant_goal": thoughts.get("relevant_goal", None),
             }
         )
         tasks.append(task)
@@ -149,11 +151,10 @@ def new_interact(
                 "ai_goals": agent.ai_goals,
                 "agent_id": agent.agent_id,
                 "full_message_history": json.dumps(agent.full_message_history),
-                "full_message_history": [],
                 "command_name": agent.command_name,
                 "arguments": agent.arguments,
                 "assistant_reply": json.dumps(agent.assistant_reply),
-                "assistant_reply": "",
+                "thoughts": json.dumps(thoughts),
                 "agents": agent.agent_manager.agents,
                 "tasks": tasks,
             }
