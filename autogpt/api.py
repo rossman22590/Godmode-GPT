@@ -82,7 +82,7 @@ def new_interact(
         command_name=command_name,
         arguments=arguments,
     )
-    entity = datastore.Entity(key=key)
+    entity = datastore.Entity(key=key, exclude_from_indexes=('full_message_history', 'agents', 'assistant_reply', 'arguments', 'command_name'))
     entity.update({
         "ai_name": agent.ai_name,
         "ai_role": agent.ai_role,
@@ -93,7 +93,7 @@ def new_interact(
         "arguments": agent.arguments,
         "assistant_reply": agent.assistant_reply,
         "agents": agent.agent_manager.agents,
-    }, exclude_from_indexes=['full_message_history', 'agents', 'assistant_reply', 'arguments', 'command_name'])
+    })
     client.put(entity)
 
     # generate simplified task name
