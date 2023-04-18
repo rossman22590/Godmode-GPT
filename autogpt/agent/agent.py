@@ -250,8 +250,8 @@ class Agent:
             try:
                 log, thoughts = print_assistant_thoughts(self.ai_name, self.assistant_reply_json)
                 godmode_log += log
-                c, arguments = get_command(self.assistant_reply_json) # type: ignore
-                command_name = c or "None"
+                c, self.arguments = get_command(self.assistant_reply_json) # type: ignore
+                self.command_name = c or "None"
                 # command_name, arguments = assistant_reply_json_valid["command"]["name"], assistant_reply_json_valid["command"]["args"]
             except Exception as e:
                 godmode_log += "Error: \n" + str(e)
@@ -263,8 +263,8 @@ class Agent:
         upload_log(ai_info + "\n\n" + memory_to_add + "\n\n" + godmode_log, self.agent_id)
 
         return (
-            command_name,
-            arguments,
+            str(self.command_name),
+            str(self.arguments),
             thoughts,
             self.full_message_history,
             self.assistant_reply,
