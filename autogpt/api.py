@@ -83,9 +83,9 @@ def new_interact(
     )
 
     # generate simplified task name
-    task = None
+    task_name = None
     try:
-        task = create_chat_completion(
+        task_name = create_chat_completion(
             [
                 chat.create_chat_message(
                     "system",
@@ -110,19 +110,42 @@ def new_interact(
     except Exception as e:
         print(e)
 
-    entity = datastore.Entity(key=key, exclude_from_indexes=('full_message_history', 'agents', 'assistant_reply', 'arguments', 'command_name'))
-    entity.update({
-        "ai_name": agent.ai_name,
-        "ai_role": agent.ai_role,
-        "ai_goals": agent.ai_goals,
-        "agent_id": agent.agent_id,
-        "full_message_history": json.dumps(agent.full_message_history),
-        "command_name": agent.command_name,
-        "arguments": agent.arguments,
-        "assistant_reply": json.dumps(agent.assistant_reply),
-        "agents": agent.agent_manager.agents,
-    })
-    client.put(entity)
+    try:
+        entity = datastore.Entity(key=key, exclude_from_indexes=('full_message_history', 'agents', 'assistant_reply', 'arguments', 'command_name', 'tasks'))
+
+        prev = client.get(key) or {}
+        tasks = prev.get("tasks", [])
+        # update the result for the last task, if it exists
+        if len(tasks) > 0:
+            lastTask: datastore.Entity = tasks[-1]
+            lastTask.update({"result": result})
+        
+        task = datastore.Entity(exclude_from_indexes=('result',))
+        task.update({
+            "command_name": command_name,
+            "arguments": json.dumps(arguments),
+            "result": None,
+            "task_name": task_name,
+        })
+        tasks.append(task)
+
+        entity.update({
+            "ai_name": agent.ai_name,
+            "ai_role": agent.ai_role,
+            "ai_goals": agent.ai_goals,
+            "agent_id": agent.agent_id,
+            "full_message_history": json.dumps(agent.full_message_history),
+            "full_message_history": [],
+            "command_name": agent.command_name,
+            "arguments": agent.arguments,
+            "assistant_reply": json.dumps(agent.assistant_reply),
+            "assistant_reply": "",
+            "agents": agent.agent_manager.agents,
+            "tasks": tasks,
+        })
+        client.put(entity)
+    except Exception as e:
+        print("DATASTORE FAILED:", e)
 
     return (
         command_name,
@@ -131,7 +154,7 @@ def new_interact(
         full_message_history,
         assistant_reply,
         result,
-        task,
+        task_name,
     )
 
 
@@ -393,7 +416,7 @@ def godmode_main():
 
 
 @app.route("/api/files", methods=["POST"]) # type: ignore
-@limiter.limit("800 per day;400 per hour;16 per minute")
+@limiter.limit("32 per minute")
 # @verify_firebase_token
 def api_files():
     try:

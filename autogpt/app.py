@@ -122,8 +122,10 @@ def execute_command(command_name: str, arguments, cfg: Config):
 
             # google_result can be a list or a string depending on the search results
             if isinstance(google_result, list):
+                return google_result
                 safe_message = [google_result_single.encode('utf-8', 'ignore') for google_result_single in google_result]
             else:
+                return [google_result]
                 safe_message = google_result.encode('utf-8', 'ignore')
 
             return str(safe_message)
