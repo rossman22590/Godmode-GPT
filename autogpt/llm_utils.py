@@ -62,7 +62,7 @@ def create_chat_completion(
         str: The response from the chat completion
     """
     if model is None:
-        model = "gpt-3.5-turbo"
+        model = cfg.fast_llm_model
     t0 = time.time()
     if temperature is None:
         temperature = cfg.temperature

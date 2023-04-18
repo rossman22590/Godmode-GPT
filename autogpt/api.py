@@ -380,6 +380,7 @@ def godmode_main():
 
         cfg = Config()
         cfg.openai_api_key = openai_key
+        cfg.fast_llm_model = gpt_model
         cfg.smart_llm_model = gpt_model
         cfg.agent_id = agent_id
 
