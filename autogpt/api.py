@@ -38,7 +38,6 @@ def new_interact(
     agent_id: str,
     full_message_history=[],
 ):
-    task = datastore.Entity(key=client.key("Task"))
     key = client.key("Agent", agent_id)
 
     logger.set_level(logging.DEBUG if cfg.debug_mode else logging.INFO)
@@ -82,19 +81,6 @@ def new_interact(
         command_name=command_name,
         arguments=arguments,
     )
-    entity = datastore.Entity(key=key, exclude_from_indexes=('full_message_history', 'agents', 'assistant_reply', 'arguments', 'command_name'))
-    entity.update({
-        "ai_name": agent.ai_name,
-        "ai_role": agent.ai_role,
-        "ai_goals": agent.ai_goals,
-        "agent_id": agent.agent_id,
-        "full_message_history": agent.full_message_history,
-        "command_name": agent.command_name,
-        "arguments": agent.arguments,
-        "assistant_reply": agent.assistant_reply,
-        "agents": agent.agent_manager.agents,
-    })
-    client.put(entity)
 
     # generate simplified task name
     task = None
@@ -123,6 +109,20 @@ def new_interact(
         )
     except Exception as e:
         print(e)
+
+    entity = datastore.Entity(key=key, exclude_from_indexes=('full_message_history', 'agents', 'assistant_reply', 'arguments', 'command_name'))
+    entity.update({
+        "ai_name": agent.ai_name,
+        "ai_role": agent.ai_role,
+        "ai_goals": agent.ai_goals,
+        "agent_id": agent.agent_id,
+        "full_message_history": json.dumps(agent.full_message_history),
+        "command_name": agent.command_name,
+        "arguments": agent.arguments,
+        "assistant_reply": json.dumps(agent.assistant_reply),
+        "agents": agent.agent_manager.agents,
+    })
+    client.put(entity)
 
     return (
         command_name,
@@ -238,7 +238,10 @@ def verify_firebase_token(f):
                 request_data.get("openai_key", None) is not None
                 and len(request_data.get("openai_key", "")) > 0
             ):
-                return f(*args, **kwargs)
+                try:
+                    return f(*args, **kwargs)
+                except Exception as e:
+                    return e
         except Exception as e:
             print(e)
 

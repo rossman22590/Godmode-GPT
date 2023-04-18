@@ -292,7 +292,7 @@ logger = Logger()
 #         logger.error("Error: \n", call_stack)
 
 
-def print_assistant_thoughts(ai_name: str, assistant_reply_json_valid: dict) -> tuple[str, dict]:
+def print_assistant_thoughts(ai_name: str, assistant_reply_json_valid: dict):
     log = ""
     assistant_thoughts_reasoning = None
     assistant_thoughts_plan = None
