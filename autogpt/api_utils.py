@@ -44,7 +44,7 @@ def list_files(agent_id: str):
 
 
 def get_file_urls(agent_id: str):
-    blobs = client.list_blobs(public_bucket_name, prefix=f"godmode-files/{agent_id}/")
+    blobs = client.list_blobs(public_bucket_name, prefix=f"godmode-files/{agent_id or ''}/")
     return [file.public_url for file in blobs]
 
 def generate_task_name(cfg, command_name:str, arguments:str):
