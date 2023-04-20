@@ -7,6 +7,7 @@ from autogpt.config import Config
 from autogpt.llm_utils import create_chat_completion
 from autogpt.logs import logger
 
+
 def create_chat_message(role, content):
     """
     Create a chat message with the given role and content.
@@ -166,7 +167,8 @@ def chat_with_ai(
             )
 
             return assistant_reply
-        except RateLimitError:
+        except RateLimitError as e:
             # TODO: When we switch to langchain, this is built in
             print("Error: ", "API Rate Limit Reached. Waiting 10 seconds...")
+            raise e
             # time.sleep(10)
