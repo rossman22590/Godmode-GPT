@@ -67,54 +67,44 @@ def create_chat_completion(
     if temperature is None:
         temperature = cfg.temperature
     response = None
-    num_retries = 1
     if cfg.debug_mode:
         print(
             Fore.GREEN
             + f"Creating chat completion with model {model}, temperature {temperature},"
             f" max_tokens {max_tokens}" + Fore.RESET
         )
-    for attempt in range(num_retries):
-        backoff = 2 ** (attempt + 2)
-        try:
-            if cfg.use_azure:
-                response = openai.ChatCompletion.create(
-                    deployment_id=cfg.get_azure_deployment_id_for_model(model), # type: ignore
-                    model=model,
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                )
-            else:
-                response = openai.ChatCompletion.create(
-                    model=model,
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    api_key=cfg.openai_api_key,
-                )
-            break
-        except RateLimitError:
-            if cfg.debug_mode:
-                print(
-                    Fore.RED + "Error: ",
-                    f"Reached rate limit, passing..." + Fore.RESET,
-                )
-        except APIError as e:
-            if e.http_status == 502:
-                pass
-            else:
-                raise
-            if attempt == num_retries - 1:
-                raise
+
+    try:
+        if cfg.use_azure:
+            response = openai.ChatCompletion.create(
+                deployment_id=cfg.get_azure_deployment_id_for_model(model), # type: ignore
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+        else:
+            response = openai.ChatCompletion.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                api_key=cfg.openai_api_key,
+            )
+    except RateLimitError as e:
+        print("RATE LIMIT ERROR", e)
         if cfg.debug_mode:
             print(
                 Fore.RED + "Error: ",
-                f"API Bad gateway. Waiting {backoff} seconds..." + Fore.RESET,
+                f"Reached rate limit, passing..." + Fore.RESET,
             )
-        # time.sleep(backoff)
+        raise e
+    except APIError as e:
+        print("API ERROR", e)
+        raise e
+    
     if response is None:
-        raise RuntimeError(f"Failed to get response after {num_retries} retries")
+        raise RuntimeError(f"Failed to get response from model {model}")
     
     print(f"CHAT COMPLETION TOOK {time.time() - t0} SECONDS", model)
 

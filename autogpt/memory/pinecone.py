@@ -49,10 +49,10 @@ class PineconeMemory(MemoryProvider):
             )
             exit(1)
 
-        if table_name not in pinecone.list_indexes():
-            pinecone.create_index(
-                table_name, dimension=dimension, metric=metric, pod_type=pod_type
-            )
+        # if table_name not in pinecone.list_indexes():
+        #     pinecone.create_index(
+        #         table_name, dimension=dimension, metric=metric, pod_type=pod_type
+        #     )
         self.index = pinecone.Index(table_name)
 
     def add(self, data):
