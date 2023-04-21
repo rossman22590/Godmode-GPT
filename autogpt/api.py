@@ -4,6 +4,7 @@ import json
 import logging
 import time
 import traceback
+from uuid import uuid4
 from autogpt.config.ai_config import AIConfig
 from autogpt.memory import get_memory
 import autogpt.chat as chat
@@ -105,6 +106,7 @@ def new_interact(
                 "command_name",
                 "tasks",
                 "ai_role",
+                "ai_goals",
             ),
         )
 
@@ -135,7 +137,7 @@ def new_interact(
                 "agent_id": agent.agent_id,
                 "full_message_history": json.dumps(agent.full_message_history),
                 "command_name": agent.command_name,
-                "arguments": agent.arguments,
+                "arguments": json.dumps(agent.arguments),
                 "assistant_reply": json.dumps(agent.assistant_reply),
                 "thoughts": json.dumps(thoughts),
                 "agents": agent.agent_manager.agents,
@@ -144,7 +146,7 @@ def new_interact(
         )
         client.put(entity)
     except Exception as e:
-        print_log("Datastore error", severity=CRITICAL, errorMsg=e)
+        print_log("Datastore error", severity=WARNING, errorMsg=e, key=str(key))
         raise e
 
     return (
@@ -281,7 +283,7 @@ def verify_firebase_token(f):
             ):
                 openai_key = request_data.get("openai_key", None)
         except Exception as e:
-            print_log("API key get failed", severity=ERROR, errorMsg=e)
+            print_log("API key get failed", severity=ERROR, errorMsg=e, text=str(request.data))
 
         if user:
             request.user = user
@@ -494,6 +496,18 @@ def session(agent_id):
     try:
         ancestor_key = client.key("Agent", agent_id)
         entity = client.get(key=ancestor_key)
+        if entity is None:
+            return json.dumps(
+                {
+                    "session": None,
+                }
+            )
+
+        entity["arguments"] = (
+            json.loads(entity["arguments"])
+            if type(entity["arguments"]) == str
+            else entity["arguments"]
+        )
 
         return json.dumps(
             {
@@ -504,6 +518,14 @@ def session(agent_id):
     except Exception as e:
         print_log("Session error", severity=ERROR, errorMsg=e)
         raise e
+
+
+# register a 500 error handler
+@app.errorhandler(500)
+def internal_error(error):
+    err_uuid = str(uuid4())
+    print_log("500 error", severity=ERROR, errorMsg=error, error_id=err_uuid)
+    return f"There was an error. Error ID: {err_uuid}", 500
 
 
 port = os.environ.get("PORT") or 5100
