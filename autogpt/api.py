@@ -13,7 +13,14 @@ from openai.error import OpenAIError
 import firebase_admin
 from firebase_admin import auth as firebase_auth
 from autogpt.llm_utils import create_chat_completion
-from autogpt.api_utils import generate_task_name, get_file_urls
+from autogpt.api_utils import (
+    CRITICAL,
+    ERROR,
+    WARNING,
+    generate_task_name,
+    get_file_urls,
+    print_log,
+)
 import logging
 from autogpt.agent.agent import Agent
 
@@ -136,7 +143,8 @@ def new_interact(
         )
         client.put(entity)
     except Exception as e:
-        print("DATASTORE FAILED:", e)
+        print_log("Datastore error", severity=CRITICAL, error=e)
+        raise e
 
     return (
         command_name,
@@ -234,7 +242,7 @@ def make_rate_limit(rate: str):
             request_data.get("openai_key", None) is not None
             and len(request_data.get("openai_key", "")) > 0
         ):
-            return "1000 per day;600 per hour;100 per minute"
+            return "5000 per day;1200 per hour;200 per minute"
 
         return rate
 
@@ -260,6 +268,7 @@ def verify_firebase_token(f):
             except ValueError as e:
                 return jsonify({"error": "Unauthorized", "message": str(e)}), 401
             except Exception as e:
+                print_log("User failed auth", severity=WARNING, error=e)
                 return jsonify({"error": "Unauthorized", "message": str(e)}), 401
 
         openai_key = None
@@ -271,7 +280,7 @@ def verify_firebase_token(f):
             ):
                 openai_key = request_data.get("openai_key", None)
         except Exception as e:
-            print(e)
+            print_log("API key get failed", severity=ERROR, error=e)
 
         if user:
             request.user = user
@@ -324,7 +333,10 @@ def subgoals():
         )
     except Exception as e:
         if isinstance(e, OpenAIError):
+            print_log("OpenAI error", severity=WARNING, error=e)
             return e.error, 503
+
+        print_log("/api-goal-subgoals", severity=ERROR, error=e)
 
     return json.dumps(
         {
@@ -412,11 +424,10 @@ def godmode_main():
         )
     except Exception as e:
         if isinstance(e, OpenAIError):
+            print_log("OpenAI error", severity=WARNING, error=e)
             return e.error, 503
 
-        # dump stacktrace to console
-        print("simple_api error", e)
-        traceback.print_exc()
+        print_log("/api error", severity=ERROR, error=e)
         raise e
 
     return json.dumps(
@@ -443,12 +454,7 @@ def api_files():
         files = get_file_urls(agent_id)
         return files
     except Exception as e:
-        if isinstance(e, OpenAIError):
-            return e.error, 503
-
-        # dump stacktrace to console
-        print("api_files error", e)
-        traceback.print_exc()
+        print_log("/api/files error", severity=ERROR, error=e)
         raise e
 
 
@@ -477,12 +483,7 @@ def sessions():
         )
 
     except Exception as e:
-        if isinstance(e, OpenAIError):
-            return e.error, 503
-
-        # dump stacktrace to console
-        print("api_files error", e)
-        traceback.print_exc()
+        print_log("Sessions error", severity=ERROR, error=e)
         raise e
 
 
@@ -501,12 +502,7 @@ def session(agent_id):
         )
 
     except Exception as e:
-        if isinstance(e, OpenAIError):
-            return e.error, 503
-
-        # dump stacktrace to console
-        print("api_files error", e)
-        traceback.print_exc()
+        print_log("Session error", severity=ERROR, error=e)
         raise e
 
 
