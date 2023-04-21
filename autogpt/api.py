@@ -283,7 +283,7 @@ def verify_firebase_token(f):
             ):
                 openai_key = request_data.get("openai_key", None)
         except Exception as e:
-            print_log("API key get failed", severity=ERROR, errorMsg=e, text=str(request.data))
+            pass
 
         if user:
             request.user = user
@@ -368,17 +368,18 @@ def godmode_main():
 
         if hasattr(request, "user"):
             try:
+                shortened_desc = ai_description[:1200]
                 user_entity = datastore.Entity(
                     key=client.key(
                         "User", request.user.get("user_id"), "Agents", agent_id
-                    )
+                    ),
                 )
                 user_entity.update(
                     {
                         "created": datetime.datetime.now(),
                         "agent_id": agent_id,
                         "ai_name": ai_name,
-                        "ai_role": ai_description,
+                        "ai_role": shortened_desc,
                     }
                 )
                 client.put(user_entity)
