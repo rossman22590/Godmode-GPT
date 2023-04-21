@@ -104,6 +104,7 @@ def new_interact(
                 "arguments",
                 "command_name",
                 "tasks",
+                "ai_role",
             ),
         )
 
@@ -143,7 +144,7 @@ def new_interact(
         )
         client.put(entity)
     except Exception as e:
-        print_log("Datastore error", severity=CRITICAL, error=e)
+        print_log("Datastore error", severity=CRITICAL, errorMsg=e)
         raise e
 
     return (
@@ -268,7 +269,7 @@ def verify_firebase_token(f):
             except ValueError as e:
                 return jsonify({"error": "Unauthorized", "message": str(e)}), 401
             except Exception as e:
-                print_log("User failed auth", severity=WARNING, error=e)
+                print_log("User failed auth", severity=WARNING, errorMsg=e)
                 return jsonify({"error": "Unauthorized", "message": str(e)}), 401
 
         openai_key = None
@@ -280,7 +281,7 @@ def verify_firebase_token(f):
             ):
                 openai_key = request_data.get("openai_key", None)
         except Exception as e:
-            print_log("API key get failed", severity=ERROR, error=e)
+            print_log("API key get failed", severity=ERROR, errorMsg=e)
 
         if user:
             request.user = user
@@ -333,10 +334,10 @@ def subgoals():
         )
     except Exception as e:
         if isinstance(e, OpenAIError):
-            print_log("OpenAI error", severity=WARNING, error=e)
+            print_log("OpenAI error", severity=WARNING, errorMsg=e)
             return e.error, 503
 
-        print_log("/api-goal-subgoals", severity=ERROR, error=e)
+        print_log("/api-goal-subgoals", severity=ERROR, errorMsg=e)
 
     return json.dumps(
         {
@@ -365,7 +366,6 @@ def godmode_main():
 
         if hasattr(request, "user"):
             try:
-                print(request.user)
                 user_entity = datastore.Entity(
                     key=client.key(
                         "User", request.user.get("user_id"), "Agents", agent_id
@@ -381,7 +381,7 @@ def godmode_main():
                 )
                 client.put(user_entity)
             except Exception as e:
-                print(e)
+                print_log("User entity failed", severity=WARNING, errorMsg=e)
 
         openai_key = request_data.get("openai_key", None)
         gpt_model = "gpt-3.5-turbo"
@@ -424,10 +424,10 @@ def godmode_main():
         )
     except Exception as e:
         if isinstance(e, OpenAIError):
-            print_log("OpenAI error", severity=WARNING, error=e)
+            print_log("OpenAI error", severity=WARNING, errorMsg=e)
             return e.error, 503
 
-        print_log("/api error", severity=ERROR, error=e)
+        print_log("/api error", severity=ERROR, errorMsg=e)
         raise e
 
     return json.dumps(
@@ -454,7 +454,7 @@ def api_files():
         files = get_file_urls(agent_id)
         return files
     except Exception as e:
-        print_log("/api/files error", severity=ERROR, error=e)
+        print_log("/api/files error", severity=ERROR, errorMsg=e)
         raise e
 
 
@@ -483,7 +483,7 @@ def sessions():
         )
 
     except Exception as e:
-        print_log("Sessions error", severity=ERROR, error=e)
+        print_log("Sessions error", severity=ERROR, errorMsg=e)
         raise e
 
 
@@ -502,7 +502,7 @@ def session(agent_id):
         )
 
     except Exception as e:
-        print_log("Session error", severity=ERROR, error=e)
+        print_log("Session error", severity=ERROR, errorMsg=e)
         raise e
 
 
