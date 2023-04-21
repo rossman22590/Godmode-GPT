@@ -35,7 +35,7 @@ class PineconeMemory(MemoryProvider):
         try:
             pinecone.whoami()
         except Exception as e:
-            print_log("Failed to connect to Pinecone", severity=CRITICAL, error=e)
+            print_log("Failed to connect to Pinecone", severity=CRITICAL, errorMsg=e)
             raise e
 
         # if table_name not in pinecone.list_indexes():
@@ -55,7 +55,7 @@ class PineconeMemory(MemoryProvider):
                 namespace=namespace,
             )
         except Exception as e:
-            print_log("Pinecone upsert error", severity=CRITICAL, error=e, pine_data=data, pine_namespace=namespace)
+            print_log("Pinecone upsert error", severity=CRITICAL, errorMsg=e, pine_data=data, pine_namespace=namespace)
             raise e
         _text = f"Inserting data into memory at index: {self.vec_num}:\n data: {data}"
         self.vec_num += 1
@@ -85,7 +85,7 @@ class PineconeMemory(MemoryProvider):
                 namespace=namespace,
             )
         except Exception as e:
-            print_log("Pinecone query error", severity=CRITICAL, error=e, pine_query=query_embedding, pine_namespace=namespace)
+            print_log("Pinecone query error", severity=CRITICAL, errorMsg=e, pine_query=query_embedding, pine_namespace=namespace)
             raise e
         sorted_results = sorted(results.matches, key=lambda x: x.score)
         return [str(item["metadata"]["raw_text"]) for item in sorted_results]
