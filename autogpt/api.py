@@ -121,7 +121,7 @@ def new_interact(
             lastTask: datastore.Entity = tasks[-1]
             lastTask.update({"result": result})
 
-        task = datastore.Entity(exclude_from_indexes=("result",))
+        task = datastore.Entity(exclude_from_indexes=("result","arguments"))
         task.update(
             {
                 "command_name": command_name,
