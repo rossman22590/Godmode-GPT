@@ -62,6 +62,10 @@ def new_interact(
     )
     # Initialize memory and make sure it is empty.
     # this is particularly important for indexing and referencing pinecone memory
+
+    # limit to 100 entries
+    full_message_history = full_message_history[-100:]
+
     agent = Agent(
         ai_name=ai_config.ai_name,
         ai_role=ai_config.ai_role,
