@@ -113,35 +113,23 @@ def create_chat_completion(
 
 def create_embedding_with_ada(text: str, cfg: Config) -> Optional[List]:
     """Create a embedding with text-ada-002 using the OpenAI SDK"""
-    num_retries = 10
-    for attempt in range(num_retries):
-        backoff = 2 ** (attempt + 2)
-        try:
-            if cfg.use_azure:
-                return openai.Embedding.create(
-                    input=[text], # type: ignore
-                    engine=cfg.get_azure_deployment_id_for_model(
-                        "text-embedding-ada-002"
-                    ),
-                )["data"][0]["embedding"]
-            else:
-                return openai.Embedding.create(
-                    input=[text], # type: ignore
-                    model="text-embedding-ada-002",
-                    api_key=cfg.openai_api_key,
-                )["data"][0]["embedding"]
-        except RateLimitError:
-            pass
-        except APIError as e:
-            if e.http_status == 502:
-                pass
-            else:
-                raise
-            if attempt == num_retries - 1:
-                raise
-        if cfg.debug_mode:
-            print(
-                Fore.RED + "Error: ",
-                f"API Bad gateway. Waiting {backoff} seconds..." + Fore.RESET,
-            )
-        # time.sleep(backoff)
+    try:
+        if cfg.use_azure:
+            return openai.Embedding.create(
+                input=[text], # type: ignore
+                engine=cfg.get_azure_deployment_id_for_model(
+                    "text-embedding-ada-002"
+                ),
+            )["data"][0]["embedding"]
+        else:
+            return openai.Embedding.create(
+                input=[text], # type: ignore
+                model="text-embedding-ada-002",
+                api_key=cfg.openai_api_key,
+            )["data"][0]["embedding"]
+    except RateLimitError as e:
+        print("RATE LIMIT ERROR", e)
+        raise e
+    except APIError as e:
+        print("API ERROR", e)
+        raise e
