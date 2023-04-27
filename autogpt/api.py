@@ -373,12 +373,12 @@ def godmode_main():
         if hasattr(request, "user"):
             try:
                 shortened_desc = ai_description[:1200]
-                user_entity = datastore.Entity(
+                users_agent = datastore.Entity(
                     key=client.key(
                         "User", request.user.get("user_id"), "Agents", agent_id
                     ),
                 )
-                user_entity.update(
+                users_agent.update(
                     {
                         "created": datetime.datetime.now(),
                         "agent_id": agent_id,
@@ -386,7 +386,7 @@ def godmode_main():
                         "ai_role": shortened_desc,
                     }
                 )
-                client.put(user_entity)
+                client.put(users_agent)
             except Exception as e:
                 print_log("User entity failed", severity=WARNING, errorMsg=e)
 
@@ -495,6 +495,36 @@ def sessions():
 
 
 @app.route("/api/sessions/<agent_id>", methods=["GET"])  # type: ignore
+@limiter.limit("16 per minute")
+@verify_firebase_token
+def session(agent_id):
+    try:
+        ancestor_key = client.key("Agent", agent_id)
+        entity = client.get(key=ancestor_key)
+        if entity is None:
+            return json.dumps(
+                {
+                    "session": None,
+                }
+            )
+
+        entity["arguments"] = (
+            json.loads(entity["arguments"])
+            if type(entity["arguments"]) == str
+            else entity["arguments"]
+        )
+
+        return json.dumps(
+            {
+                "session": entity,
+            }
+        )
+
+    except Exception as e:
+        print_log("Session error", severity=ERROR, errorMsg=e)
+        raise e
+
+@app.route("/api/sessions/<agent_id>", methods=["DELETE"])  # type: ignore
 @limiter.limit("16 per minute")
 @verify_firebase_token
 def session(agent_id):
