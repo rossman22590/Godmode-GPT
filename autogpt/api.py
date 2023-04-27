@@ -121,7 +121,7 @@ def new_interact(
             lastTask: datastore.Entity = tasks[-1]
             lastTask.update({"result": result})
 
-        task = datastore.Entity(exclude_from_indexes=("result","arguments"))
+        task = datastore.Entity(exclude_from_indexes=("result", "arguments"))
         task.update(
             {
                 "command_name": command_name,
@@ -473,8 +473,10 @@ def sessions():
         kind = "Agents"
         ancestor_key = client.key("User", request.user.get("user_id"))
 
-        # Create a query object with the ancestor filter
-        query = client.query(kind=kind, ancestor=ancestor_key)
+        # Create a query object with the ancestor filter, where the entity's delete is not set
+        query = client.query(
+            kind=kind, ancestor=ancestor_key, filters=[("deleted", "=", None)]
+        )
         results = list(query.fetch())
         return json.dumps(
             {
@@ -524,31 +526,26 @@ def session(agent_id):
         print_log("Session error", severity=ERROR, errorMsg=e)
         raise e
 
+
 @app.route("/api/sessions/<agent_id>", methods=["DELETE"])  # type: ignore
 @limiter.limit("16 per minute")
 @verify_firebase_token
 def session(agent_id):
     try:
-        ancestor_key = client.key("Agent", agent_id)
-        entity = client.get(key=ancestor_key)
-        if entity is None:
-            return json.dumps(
-                {
-                    "session": None,
-                }
-            )
-
-        entity["arguments"] = (
-            json.loads(entity["arguments"])
-            if type(entity["arguments"]) == str
-            else entity["arguments"]
+        useragent_key = client.key(
+            "User", request.user.get("user_id"), "Agents", agent_id
         )
-
-        return json.dumps(
+        current_agent = client.get(key=useragent_key) or {}
+        users_agent = datastore.Entity(key=useragent_key)
+        users_agent.update(
             {
-                "session": entity,
+                **current_agent,
+                "deleted": datetime.datetime.now(),
             }
         )
+        client.put(users_agent)
+
+        return json.dumps({})
 
     except Exception as e:
         print_log("Session error", severity=ERROR, errorMsg=e)
