@@ -80,12 +80,7 @@ def download_file(url, filename):
     except Exception as e:
         return "Error: " + str(e)
 
-
-from google.cloud import firestore
 from autogpt.api_utils import get_file, list_files, write_file
-
-db = firestore.Client()
-collection = db.collection("godmode-files")
 
 
 def read_file(agent_id, filename):
