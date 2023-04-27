@@ -530,7 +530,7 @@ def session(agent_id):
 @app.route("/api/sessions/<agent_id>", methods=["DELETE"])  # type: ignore
 @limiter.limit("16 per minute")
 @verify_firebase_token
-def session(agent_id):
+def delete_session(agent_id):
     try:
         useragent_key = client.key(
             "User", request.user.get("user_id"), "Agents", agent_id
