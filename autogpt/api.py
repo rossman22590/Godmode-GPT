@@ -31,6 +31,10 @@ from autogpt.memory import get_memory
 from autogpt.memory.pinecone import PineconeMemory
 from google.cloud import datastore
 
+from google.cloud import firestore
+
+fireclient = firestore.Client()
+
 client = datastore.Client()
 
 global_config = Config()
@@ -470,14 +474,19 @@ def api_files():
 @verify_firebase_token
 def sessions():
     try:
-        kind = "Agents"
-        ancestor_key = client.key("User", request.user.get("user_id"))
-
-        # Create a query object with the ancestor filter, where the entity's delete is not set
-        query = client.query(
-            kind=kind, ancestor=ancestor_key, filters=[("deleted", "=", None)]
+        ref = (
+            fireclient.collection("User")
+            .document(request.user.get("user_id"))
+            .collection("Agents")
+            .where("ai_name", "!=", "deleted")
         )
-        results = list(query.fetch())
+        docs = ref.stream()
+        results = []
+        for doc in docs:
+            agent = doc.to_dict()
+            agent["agent_id"] = doc.id
+            results.append(agent)
+
         return json.dumps(
             {
                 "sessions": [
@@ -535,12 +544,14 @@ def delete_session(agent_id):
         useragent_key = client.key(
             "User", request.user.get("user_id"), "Agents", agent_id
         )
+
         current_agent = client.get(key=useragent_key) or {}
         users_agent = datastore.Entity(key=useragent_key)
         users_agent.update(
             {
                 **current_agent,
                 "deleted": datetime.datetime.now(),
+                "ai_name": "deleted",  # workaround since datastore can't query for lack of a property https://stackoverflow.com/a/44187921/6912118
             }
         )
         client.put(users_agent)
