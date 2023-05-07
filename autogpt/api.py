@@ -77,6 +77,7 @@ def new_interact(
         # "autogpt.commands.audio_text",
         # "autogpt.commands.execute_code",
         # "autogpt.commands.file_operations",
+        "autogpt.commands.firestore_operations",
         # "autogpt.commands.git_operations",
         "autogpt.commands.google_search",
         # "autogpt.commands.image_gen",
