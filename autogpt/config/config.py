@@ -1,6 +1,8 @@
 """Configuration class to store the state of bools for different scripts access."""
 import os
 from typing import List
+from colorama import Fore
+# from autogpt.agent_manager import AgentManager
 
 import openai
 import yaml
@@ -8,12 +10,32 @@ from auto_gpt_plugin_template import AutoGPTPluginTemplate
 from colorama import Fore
 
 from autogpt.singleton import Singleton
+from dotenv import load_dotenv
+
+def is_valid_int(value: str) -> bool:
+    """Check if the value is a valid integer
+
+    Args:
+        value (str): The value to check
+
+    Returns:
+        bool: True if the value is a valid integer, False otherwise
+    """
+    try:
+        int(value)
+        return True
+    except ValueError:
+        return False
+
+load_dotenv(verbose=True)
 
 
-class Config(metaclass=Singleton):
+class Config():
     """
     Configuration class to store the state of bools for different scripts access.
     """
+
+    openai_api_key: str
 
     def __init__(self) -> None:
         """Initialize the Config class"""
@@ -36,6 +58,7 @@ class Config(metaclass=Singleton):
             self.disabled_command_categories = disabled_command_categories.split(",")
         else:
             self.disabled_command_categories = []
+        self.agent_id = None
 
         self.ai_settings_file = os.getenv("AI_SETTINGS_FILE", "ai_settings.yaml")
         self.fast_llm_model = os.getenv("FAST_LLM_MODEL", "gpt-3.5-turbo")
@@ -50,7 +73,7 @@ class Config(metaclass=Singleton):
             "BROWSE_SPACY_LANGUAGE_MODEL", "en_core_web_sm"
         )
 
-        self.openai_api_key = os.getenv("OPENAI_API_KEY")
+        self.openai_api_key = os.getenv("OPENAI_API_KEY") # type: ignore
         self.temperature = float(os.getenv("TEMPERATURE", "0"))
         self.use_azure = os.getenv("USE_AZURE") == "True"
         self.execute_local_commands = (
@@ -130,8 +153,7 @@ class Config(metaclass=Singleton):
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36"
             " (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36",
         )
-
-        self.redis_host = os.getenv("REDIS_HOST", "localhost")
+        self.redis_host = os.getenv("REDIS_HOST", None)
         self.redis_port = os.getenv("REDIS_PORT", "6379")
         self.redis_password = os.getenv("REDIS_PASSWORD", "")
         self.wipe_redis_on_start = os.getenv("WIPE_REDIS_ON_START", "True") == "True"
@@ -305,5 +327,5 @@ def check_openai_api_key() -> None:
             + "Please set your OpenAI API key in .env or as an environment variable."
             + Fore.RESET
         )
-        print("You can get your key from https://platform.openai.com/account/api-keys")
-        exit(1)
+        # print("You can get your key from https://beta.openai.com/account/api-keys")
+        # exit(1)

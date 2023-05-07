@@ -8,7 +8,7 @@ from autogpt.prompts.generator import PromptGenerator
 from autogpt.setup import prompt_user
 from autogpt.utils import clean_input
 
-CFG = Config()
+global_config = Config()
 
 DEFAULT_TRIGGERING_PROMPT = (
     "Determine which next command to use, and respond using the format specified above:"
@@ -76,8 +76,8 @@ def construct_main_ai_config() -> AIConfig:
     Returns:
         str: The prompt string
     """
-    config = AIConfig.load(CFG.ai_settings_file)
-    if CFG.skip_reprompt and config.ai_name:
+    config = AIConfig.load(global_config.ai_settings_file)
+    if global_config.skip_reprompt and config.ai_name:
         logger.typewriter_log("Name :", Fore.GREEN, config.ai_name)
         logger.typewriter_log("Role :", Fore.GREEN, config.ai_role)
         logger.typewriter_log("Goals:", Fore.GREEN, f"{config.ai_goals}")
@@ -99,14 +99,14 @@ Name:  {config.ai_name}
 Role:  {config.ai_role}
 Goals: {config.ai_goals}
 API Budget: {"infinite" if config.api_budget <= 0 else f"${config.api_budget}"}
-Continue ({CFG.authorise_key}/{CFG.exit_key}): """
+Continue ({global_config.authorise_key}/{global_config.exit_key}): """
         )
-        if should_continue.lower() == CFG.exit_key:
+        if should_continue.lower() == global_config.exit_key:
             config = AIConfig()
 
     if not config.ai_name:
         config = prompt_user()
-        config.save(CFG.ai_settings_file)
+        config.save(global_config.ai_settings_file)
 
     # set the total api budget
     api_manager = ApiManager()

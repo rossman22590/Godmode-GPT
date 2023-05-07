@@ -8,7 +8,7 @@ from jsonschema import Draft7Validator
 from autogpt.config import Config
 from autogpt.logs import logger
 
-CFG = Config()
+global_config = Config()
 LLM_DEFAULT_RESPONSE_FORMAT = "llm_response_format_1"
 
 
@@ -43,7 +43,7 @@ def validate_json(json_object: object, schema_name: str) -> dict | None:
 
     if errors := sorted(validator.iter_errors(json_object), key=lambda e: e.path):
         logger.error("The JSON object is invalid.")
-        if CFG.debug_mode:
+        if global_config.debug_mode:
             logger.error(
                 json.dumps(json_object, indent=4)
             )  # Replace 'json_object' with the variable containing the JSON data

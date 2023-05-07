@@ -12,7 +12,8 @@ from redis.commands.search.query import Query
 
 from autogpt.llm import get_ada_embedding
 from autogpt.logs import logger
-from autogpt.memory.base import MemoryProviderSingleton
+from autogpt.memory.base import MemoryProvider
+from autogpt.llm_utils import create_embedding_with_ada
 
 SCHEMA = [
     TextField("data"),
@@ -24,7 +25,7 @@ SCHEMA = [
 ]
 
 
-class RedisMemory(MemoryProviderSingleton):
+class RedisMemory(MemoryProvider):
     def __init__(self, cfg):
         """
         Initializes the Redis memory provider.

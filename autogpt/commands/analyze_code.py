@@ -28,4 +28,4 @@ def analyze_code(code: str) -> list[str]:
         "Analyzes the given code and returns a list of suggestions for improvements."
     )
 
-    return call_ai_function(function_string, args, description_string)
+    return call_ai_function(function_string, args, description_string, cfg=cfg)

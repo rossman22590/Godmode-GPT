@@ -6,14 +6,14 @@ import requests
 from autogpt.commands.command import command
 from autogpt.config import Config
 
-CFG = Config()
+global_config = Config()
 
 
 @command(
     "read_audio_from_file",
     "Convert Audio to text",
     '"filename": "<filename>"',
-    CFG.huggingface_audio_to_text_model,
+    global_config.huggingface_audio_to_text_model,
     "Configure huggingface_audio_to_text_model.",
 )
 def read_audio_from_file(filename: str) -> str:
@@ -41,9 +41,9 @@ def read_audio(audio: bytes) -> str:
     Returns:
         str: The text from the audio
     """
-    model = CFG.huggingface_audio_to_text_model
+    model = global_config.huggingface_audio_to_text_model
     api_url = f"https://api-inference.huggingface.co/models/{model}"
-    api_token = CFG.huggingface_api_token
+    api_token = global_config.huggingface_api_token
     headers = {"Authorization": f"Bearer {api_token}"}
 
     if api_token is None:

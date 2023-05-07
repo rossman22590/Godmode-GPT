@@ -11,8 +11,6 @@ from autogpt.llm.token_counter import count_message_tokens
 from autogpt.log_cycle.log_cycle import CURRENT_CONTEXT_FILE_NAME
 from autogpt.logs import logger
 
-cfg = Config()
-
 
 def create_chat_message(role, content) -> Message:
     """
@@ -53,9 +51,14 @@ def generate_context(prompt, relevant_memory, full_message_history, model):
     )
 
 
-# TODO: Change debug from hardcode to argument
 def chat_with_ai(
-    agent, prompt, user_input, full_message_history, permanent_memory, token_limit
+    agent,
+    prompt,
+    user_input,
+    full_message_history,
+    permanent_memory,
+    token_limit,
+    cfg: Config,
 ):
     """Interact with the OpenAI API, sending the prompt, user input, message history,
     and permanent memory."""
@@ -82,18 +85,18 @@ def chat_with_ai(
             logger.debug(f"Token limit: {token_limit}")
             send_token_limit = token_limit - 1000
 
-            # if len(full_message_history) == 0:
-            #     relevant_memory = ""
-            # else:
-            #     recent_history = full_message_history[-5:]
-            #     shuffle(recent_history)
-            #     relevant_memories = permanent_memory.get_relevant(
-            #         str(recent_history), 5
-            #     )
-            #     if relevant_memories:
-            #         shuffle(relevant_memories)
-            #     relevant_memory = str(relevant_memories)
-            relevant_memory = ""
+            if len(full_message_history) == 0:
+                relevant_memory = ""
+            else:
+                recent_history = full_message_history[-5:]
+                shuffle(recent_history)
+                relevant_memories = permanent_memory.get_relevant(
+                    str(recent_history), 5
+                )
+                if relevant_memories:
+                    shuffle(relevant_memories)
+                relevant_memory = str(relevant_memories)
+
             logger.debug(f"Memory Stats: {permanent_memory.get_stats()}")
 
             (
@@ -220,24 +223,17 @@ def chat_with_ai(
             #  https://www.github.com/Torantulino/Auto-GPT"
 
             # Debug print the current context
-            logger.debug(f"Token limit: {token_limit}")
-            logger.debug(f"Send Token Count: {current_tokens_used}")
-            logger.debug(f"Tokens remaining for response: {tokens_remaining}")
-            logger.debug("------------ CONTEXT SENT TO AI ---------------")
-            for message in current_context:
-                # Skip printing the prompt
-                if message["role"] == "system" and message["content"] == prompt:
-                    continue
-                logger.debug(f"{message['role'].capitalize()}: {message['content']}")
-                logger.debug("")
-            logger.debug("----------- END OF CONTEXT ----------------")
-            agent.log_cycle_handler.log_cycle(
-                agent.config.ai_name,
-                agent.created_at,
-                agent.cycle_count,
-                current_context,
-                CURRENT_CONTEXT_FILE_NAME,
-            )
+            # logger.debug(f"Token limit: {token_limit}")
+            # logger.debug(f"Send Token Count: {current_tokens_used}")
+            # logger.debug(f"Tokens remaining for response: {tokens_remaining}")
+            # logger.debug("------------ CONTEXT SENT TO AI ---------------")
+            # for message in current_context:
+            #     # Skip printing the prompt
+            #     if message["role"] == "system" and message["content"] == prompt:
+            #         continue
+            #     logger.debug(f"{message['role'].capitalize()}: {message['content']}")
+            #     logger.debug("")
+            # logger.debug("----------- END OF CONTEXT ----------------")
 
             # TODO: use a model defined elsewhere, so that model can contain
             # temperature and other settings we care about
@@ -245,6 +241,7 @@ def chat_with_ai(
                 model=model,
                 messages=current_context,
                 max_tokens=tokens_remaining,
+                cfg=cfg,
             )
 
             # Update full message history
@@ -254,7 +251,8 @@ def chat_with_ai(
             )
 
             return assistant_reply
-        except RateLimitError:
+        except RateLimitError as e:
             # TODO: When we switch to langchain, this is built in
-            logger.warn("Error: ", "API Rate Limit Reached. Waiting 10 seconds...")
-            time.sleep(10)
+            print("Error: ", "API Rate Limit Reached. Waiting 10 seconds...")
+            raise e
+            # time.sleep(10)

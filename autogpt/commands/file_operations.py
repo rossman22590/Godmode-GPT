@@ -17,7 +17,7 @@ from autogpt.logs import logger
 from autogpt.spinner import Spinner
 from autogpt.utils import readable_file_size
 
-CFG = Config()
+global_config = Config()
 
 Operation = Literal["write", "append", "delete"]
 
@@ -88,7 +88,7 @@ def is_duplicate_operation(
     Returns:
         True if the operation has already been performed on the file
     """
-    state = file_operations_state(CFG.file_logger_path)
+    state = file_operations_state(global_config.file_logger_path)
     if operation == "delete" and filename not in state:
         return True
     if operation == "write" and state.get(filename) == checksum:
@@ -108,7 +108,7 @@ def log_operation(operation: str, filename: str, checksum: str | None = None) ->
     if checksum is not None:
         log_entry += f" #{checksum}"
     logger.debug(f"Logging file operation: {log_entry}")
-    append_to_file(CFG.file_logger_path, f"{log_entry}\n", should_log=False)
+    append_to_file(global_config.file_logger_path, f"{log_entry}\n", should_log=False)
 
 
 def split_file(
@@ -288,7 +288,7 @@ def list_files(directory: str) -> list[str]:
             if file.startswith("."):
                 continue
             relative_path = os.path.relpath(
-                os.path.join(root, file), CFG.workspace_path
+                os.path.join(root, file), global_config.workspace_path
             )
             found_files.append(relative_path)
 
@@ -299,7 +299,7 @@ def list_files(directory: str) -> list[str]:
     "download_file",
     "Download File",
     '"url": "<url>", "filename": "<filename>"',
-    CFG.allow_downloads,
+    global_config.allow_downloads,
     "Error: You do not have user authorization to download files locally.",
 )
 def download_file(url, filename):

@@ -10,7 +10,7 @@ from autogpt.commands.command import command
 from autogpt.config import Config
 from autogpt.logs import logger
 
-CFG = Config()
+global_config = Config()
 
 
 @command("execute_python_file", "Execute Python File", '"filename": "<filename>"')
@@ -65,9 +65,9 @@ def execute_python_file(filename: str) -> str:
                     logger.info(status)
         container = client.containers.run(
             image_name,
-            f"python {Path(filename).relative_to(CFG.workspace_path)}",
+            f"python {Path(filename).relative_to(global_config.workspace_path)}",
             volumes={
-                CFG.workspace_path: {
+                global_config.workspace_path: {
                     "bind": "/workspace",
                     "mode": "ro",
                 }
@@ -101,7 +101,7 @@ def execute_python_file(filename: str) -> str:
     "execute_shell",
     "Execute Shell Command, non-interactive commands only",
     '"command_line": "<command_line>"',
-    CFG.execute_local_commands,
+    global_config.execute_local_commands,
     "You are not allowed to run local shell commands. To execute"
     " shell commands, EXECUTE_LOCAL_COMMANDS must be set to 'True' "
     "in your config. Do not attempt to bypass the restriction.",
@@ -118,8 +118,8 @@ def execute_shell(command_line: str) -> str:
 
     current_dir = Path.cwd()
     # Change dir into workspace if necessary
-    if not current_dir.is_relative_to(CFG.workspace_path):
-        os.chdir(CFG.workspace_path)
+    if not current_dir.is_relative_to(global_config.workspace_path):
+        os.chdir(global_config.workspace_path)
 
     logger.info(
         f"Executing command '{command_line}' in working directory '{os.getcwd()}'"
@@ -138,7 +138,7 @@ def execute_shell(command_line: str) -> str:
     "execute_shell_popen",
     "Execute Shell Command, non-interactive commands only",
     '"command_line": "<command_line>"',
-    CFG.execute_local_commands,
+    global_config.execute_local_commands,
     "You are not allowed to run local shell commands. To execute"
     " shell commands, EXECUTE_LOCAL_COMMANDS must be set to 'True' "
     "in your config. Do not attempt to bypass the restriction.",
@@ -156,8 +156,8 @@ def execute_shell_popen(command_line) -> str:
 
     current_dir = os.getcwd()
     # Change dir into workspace if necessary
-    if CFG.workspace_path not in current_dir:
-        os.chdir(CFG.workspace_path)
+    if global_config.workspace_path not in current_dir:
+        os.chdir(global_config.workspace_path)
 
     logger.info(
         f"Executing command '{command_line}' in working directory '{os.getcwd()}'"

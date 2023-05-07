@@ -110,6 +110,7 @@ def call_ai_function(
 # simple retry mechanism when getting a rate error or a bad gateway
 def create_chat_completion(
     messages: List[Message],  # type: ignore
+    cfg: Config,
     model: Optional[str] = None,
     temperature: float = None,
     max_tokens: Optional[int] = None,
@@ -125,7 +126,6 @@ def create_chat_completion(
     Returns:
         str: The response from the chat completion
     """
-    cfg = Config()
     if temperature is None:
         temperature = cfg.temperature
 

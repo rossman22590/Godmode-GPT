@@ -1,42 +1,19 @@
-# 'dev' or 'release' container build
-ARG BUILD_TYPE=dev
+FROM python:3.11-slim-bullseye
 
-# Use an official Python base image from the Docker Hub
-FROM python:3.10-slim AS autogpt-base
+WORKDIR /app
+COPY requirements-docker.txt /app
 
-# Install browsers
-RUN apt-get update && apt-get install -y \
-    chromium-driver firefox-esr \
-    ca-certificates
+RUN pip install -r requirements-docker.txt
+EXPOSE 8080
 
-# Install utilities
 RUN apt-get install -y curl jq wget git
+ENV PYTHONUNBUFFERED True
 
-# Set environment variables
-ENV PIP_NO_CACHE_DIR=yes \
-    PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+COPY autogpt/ /app/autogpt
+COPY gunicorn.conf.py /app
+COPY credentials/ /app/credentials
 
-# Install the required python packages globally
-ENV PATH="$PATH:/root/.local/bin"
-COPY requirements.txt .
+ENV PORT 8080
+ENV HOST 0.0.0.0
 
-# Set the entrypoint
-ENTRYPOINT ["python", "-m", "autogpt"]
-
-# dev build -> include everything
-FROM autogpt-base as autogpt-dev
-RUN pip install --no-cache-dir -r requirements.txt
-WORKDIR /app
-ONBUILD COPY . ./
-
-# release build -> include bare minimum
-FROM autogpt-base as autogpt-release
-RUN sed -i '/Items below this point will not be included in the Docker Image/,$d' requirements.txt && \
-	pip install --no-cache-dir -r requirements.txt
-WORKDIR /app
-ONBUILD COPY autogpt/ ./autogpt
-ONBUILD COPY scripts/ ./scripts
-
-
-FROM autogpt-${BUILD_TYPE} AS auto-gpt
+CMD ["gunicorn" , "-c", "gunicorn.conf.py", "autogpt.api:app"]

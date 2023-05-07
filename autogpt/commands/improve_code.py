@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from autogpt.config.config import Config
 
 from autogpt.commands.command import command
 from autogpt.llm import call_ai_function
@@ -32,4 +33,4 @@ def improve_code(suggestions: list[str], code: str) -> str:
         " provided, making no other changes."
     )
 
-    return call_ai_function(function_string, args, description_string)
+    return call_ai_function(function_string, args, description_string, cfg=cfg)

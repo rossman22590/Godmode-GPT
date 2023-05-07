@@ -13,6 +13,10 @@ from autogpt.log_cycle.json_handler import JsonFileHandler, JsonFormatter
 from autogpt.singleton import Singleton
 from autogpt.speech import say_text
 
+from autogpt.config import Config
+
+global_config = Config()
+
 
 class Logger(metaclass=Singleton):
     """
@@ -34,9 +38,9 @@ class Logger(metaclass=Singleton):
         console_formatter = AutoGptFormatter("%(title_color)s %(message)s")
 
         # Create a handler for console which simulate typing
-        self.typing_console_handler = TypingConsoleHandler()
-        self.typing_console_handler.setLevel(logging.INFO)
-        self.typing_console_handler.setFormatter(console_formatter)
+        # self.typing_console_handler = TypingConsoleHandler()
+        # self.typing_console_handler.setLevel(logging.INFO)
+        # self.typing_console_handler.setFormatter(console_formatter)
 
         # Create a handler for console without typing simulation
         self.console_handler = ConsoleHandler()
@@ -65,7 +69,7 @@ class Logger(metaclass=Singleton):
         error_handler.setFormatter(error_formatter)
 
         self.typing_logger = logging.getLogger("TYPER")
-        self.typing_logger.addHandler(self.typing_console_handler)
+        # self.typing_logger.addHandler(self.typing_console_handler)
         self.typing_logger.addHandler(self.file_handler)
         self.typing_logger.addHandler(error_handler)
         self.typing_logger.setLevel(logging.DEBUG)
@@ -98,10 +102,8 @@ class Logger(metaclass=Singleton):
                 content = " ".join(content)
         else:
             content = ""
-
-        self.typing_logger.log(
-            level, content, extra={"title": title, "color": title_color}
-        )
+        
+        return title + content + "\n"
 
     def debug(
         self,
@@ -185,26 +187,26 @@ Output stream to console using simulated typing
 """
 
 
-class TypingConsoleHandler(logging.StreamHandler):
-    def emit(self, record):
-        min_typing_speed = 0.05
-        max_typing_speed = 0.01
+# class TypingConsoleHandler(logging.StreamHandler):
+#     def emit(self, record):
+        # min_typing_speed = 0.05
+        # max_typing_speed = 0.01
 
-        msg = self.format(record)
-        try:
-            words = msg.split()
-            for i, word in enumerate(words):
-                print(word, end="", flush=True)
-                if i < len(words) - 1:
-                    print(" ", end="", flush=True)
-                typing_speed = random.uniform(min_typing_speed, max_typing_speed)
-                time.sleep(typing_speed)
-                # type faster after each word
-                min_typing_speed = min_typing_speed * 0.95
-                max_typing_speed = max_typing_speed * 0.95
-            print()
-        except Exception:
-            self.handleError(record)
+        # msg = self.format(record)
+        # try:
+        #     words = msg.split()
+        #     for i, word in enumerate(words):
+        #         print(word, end="", flush=True)
+        #         if i < len(words) - 1:
+        #             print(" ", end="", flush=True)
+        #         typing_speed = random.uniform(min_typing_speed, max_typing_speed)
+        #         # time.sleep(typing_speed)
+        #         # type faster after each word
+        #         min_typing_speed = min_typing_speed * 0.95
+        #         max_typing_speed = max_typing_speed * 0.95
+        #     print()
+        # except Exception:
+        #     self.handleError(record)
 
 
 class ConsoleHandler(logging.StreamHandler):
@@ -256,10 +258,12 @@ def print_assistant_thoughts(
     assistant_reply_json_valid: object,
     speak_mode: bool = False,
 ) -> None:
+    log = ""
     assistant_thoughts_reasoning = None
     assistant_thoughts_plan = None
     assistant_thoughts_speak = None
     assistant_thoughts_criticism = None
+    assistant_thoughts_relevant_goal = None
 
     assistant_thoughts = assistant_reply_json_valid.get("thoughts", {})
     assistant_thoughts_text = assistant_thoughts.get("text")
@@ -268,12 +272,16 @@ def print_assistant_thoughts(
         assistant_thoughts_plan = assistant_thoughts.get("plan")
         assistant_thoughts_criticism = assistant_thoughts.get("criticism")
         assistant_thoughts_speak = assistant_thoughts.get("speak")
-    logger.typewriter_log(
+        assistant_thoughts_relevant_goal = assistant_thoughts.get("relevant_goal")
+
+    log += logger.typewriter_log(
         f"{ai_name.upper()} THOUGHTS:", Fore.YELLOW, f"{assistant_thoughts_text}"
     )
-    logger.typewriter_log("REASONING:", Fore.YELLOW, f"{assistant_thoughts_reasoning}")
+    log += logger.typewriter_log(
+        "REASONING:", Fore.YELLOW, f"{assistant_thoughts_reasoning}"
+    )
     if assistant_thoughts_plan:
-        logger.typewriter_log("PLAN:", Fore.YELLOW, "")
+        log += logger.typewriter_log("PLAN:", Fore.YELLOW, "")
         # If it's a list, join it into a string
         if isinstance(assistant_thoughts_plan, list):
             assistant_thoughts_plan = "\n".join(assistant_thoughts_plan)
@@ -284,8 +292,19 @@ def print_assistant_thoughts(
         lines = assistant_thoughts_plan.split("\n")
         for line in lines:
             line = line.lstrip("- ")
-            logger.typewriter_log("- ", Fore.GREEN, line.strip())
-    logger.typewriter_log("CRITICISM:", Fore.YELLOW, f"{assistant_thoughts_criticism}")
+            log += logger.typewriter_log("- ", Fore.GREEN, line.strip())
+    log += logger.typewriter_log(
+        "CRITICISM:", Fore.YELLOW, f"{assistant_thoughts_criticism}"
+    )
     # Speak the assistant's thoughts
     if speak_mode and assistant_thoughts_speak:
         say_text(assistant_thoughts_speak)
+
+    return log, {
+        "thoughts": assistant_thoughts_text,
+        "reasoning": assistant_thoughts_reasoning,
+        "plan": assistant_thoughts_plan,
+        "criticism": assistant_thoughts_criticism,
+        "speak": assistant_thoughts_speak,
+        "relevant_goal": assistant_thoughts_relevant_goal,
+    }

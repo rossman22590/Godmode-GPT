@@ -3,19 +3,20 @@ from typing import Dict, Generator, Optional
 
 import spacy
 from selenium.webdriver.remote.webdriver import WebDriver
+from autogpt.commands.web_requests import create_message
 
 from autogpt.config import Config
 from autogpt.llm import count_message_tokens, create_chat_completion
 from autogpt.logs import logger
 from autogpt.memory import get_memory
 
-CFG = Config()
+global_config = Config()
 
 
 def split_text(
     text: str,
-    max_length: int = CFG.browse_chunk_max_length,
-    model: str = CFG.fast_llm_model,
+    max_length: int = global_config.browse_chunk_max_length,
+    model: str = global_config.fast_llm_model,
     question: str = "",
 ) -> Generator[str, None, None]:
     """Split text into chunks of a maximum length
@@ -31,7 +32,7 @@ def split_text(
         ValueError: If the text is longer than the maximum length
     """
     flatened_paragraphs = " ".join(text.split("\n"))
-    nlp = spacy.load(CFG.browse_spacy_language_model)
+    nlp = spacy.load(global_config.browse_spacy_language_model)
     nlp.add_pipe("sentencizer")
     doc = nlp(flatened_paragraphs)
     sentences = [sent.text.strip() for sent in doc.sents]
@@ -69,7 +70,7 @@ def split_text(
 
 
 def summarize_text(
-    url: str, text: str, question: str, driver: Optional[WebDriver] = None
+    url: str, text: str, question: str, cfg: Config, driver: None = None
 ) -> str:
     """Summarize text using the OpenAI API
 
@@ -85,26 +86,26 @@ def summarize_text(
     if not text:
         return "Error: No text to summarize"
 
-    model = CFG.fast_llm_model
+    model = global_config.fast_llm_model
     text_length = len(text)
     logger.info(f"Text length: {text_length} characters")
 
     summaries = []
     chunks = list(
         split_text(
-            text, max_length=CFG.browse_chunk_max_length, model=model, question=question
+            text, max_length=global_config.browse_chunk_max_length, model=model, question=question
         ),
     )
     scroll_ratio = 1 / len(chunks)
 
     for i, chunk in enumerate(chunks):
-        if driver:
-            scroll_to_percentage(driver, scroll_ratio * i)
+        # if driver:
+        #     scroll_to_percentage(driver, scroll_ratio * i)
         logger.info(f"Adding chunk {i + 1} / {len(chunks)} to memory")
 
         memory_to_add = f"Source: {url}\n" f"Raw content part#{i + 1}: {chunk}"
 
-        memory = get_memory(CFG)
+        memory = get_memory(global_config)
         memory.add(memory_to_add)
 
         messages = [create_message(chunk, question)]
@@ -116,6 +117,7 @@ def summarize_text(
         summary = create_chat_completion(
             model=model,
             messages=messages,
+            cfg=cfg,
         )
         summaries.append(summary)
         logger.info(
@@ -134,22 +136,23 @@ def summarize_text(
     return create_chat_completion(
         model=model,
         messages=messages,
+        cfg=cfg,
     )
 
 
-def scroll_to_percentage(driver: WebDriver, ratio: float) -> None:
-    """Scroll to a percentage of the page
+# def scroll_to_percentage(driver: WebDriver, ratio: float) -> None:
+#     """Scroll to a percentage of the page
 
-    Args:
-        driver (WebDriver): The webdriver to use
-        ratio (float): The percentage to scroll to
+#     Args:
+#         driver (WebDriver): The webdriver to use
+#         ratio (float): The percentage to scroll to
 
-    Raises:
-        ValueError: If the ratio is not between 0 and 1
-    """
-    if ratio < 0 or ratio > 1:
-        raise ValueError("Percentage should be between 0 and 1")
-    driver.execute_script(f"window.scrollTo(0, document.body.scrollHeight * {ratio});")
+#     Raises:
+#         ValueError: If the ratio is not between 0 and 1
+#     """
+#     if ratio < 0 or ratio > 1:
+#         raise ValueError("Percentage should be between 0 and 1")
+#     driver.execute_script(f"window.scrollTo(0, document.body.scrollHeight * {ratio});")
 
 
 def create_message(chunk: str, question: str) -> Dict[str, str]:

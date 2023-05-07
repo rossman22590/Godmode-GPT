@@ -11,7 +11,7 @@ from autogpt.config import Config
 from autogpt.json_utils.utilities import extract_char_position
 from autogpt.logs import logger
 
-CFG = Config()
+global_config = Config()
 
 
 def fix_invalid_escape(json_to_load: str, error_message: str) -> str:

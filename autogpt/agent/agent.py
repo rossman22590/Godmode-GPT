@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from colorama import Fore, Style
+from autogpt.agent_manager import AgentManager
 
 from autogpt.app import execute_command, get_command
 from autogpt.config import Config
@@ -50,9 +51,13 @@ class Agent:
         (defining the next task)
     """
 
+    cfg: Config
+
     def __init__(
         self,
         ai_name,
+        ai_role,
+        ai_goals,
         memory,
         full_message_history,
         next_action_count,
@@ -60,10 +65,17 @@ class Agent:
         config,
         system_prompt,
         triggering_prompt,
-        workspace_directory,
+        command_name,
+        arguments,
+        agent_id,
+        cfg: Config,
+        assistant_reply: str,
+        agents: dict[int, tuple[str, list[dict[str, str]], str]],
     ):
-        cfg = Config()
+        self.cfg = cfg
         self.ai_name = ai_name
+        self.ai_role = ai_role
+        self.ai_goals = ai_goals
         self.memory = memory
         self.summary_memory = (
             "I was created."  # Initial memory necessary to avoid hallucination
@@ -75,10 +87,14 @@ class Agent:
         self.config = config
         self.system_prompt = system_prompt
         self.triggering_prompt = triggering_prompt
-        self.workspace = Workspace(workspace_directory, cfg.restrict_to_workspace)
         self.created_at = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.cycle_count = 0
         self.log_cycle_handler = LogCycleHandler()
+        self.command_name = command_name
+        self.arguments = arguments
+        self.agent_id = agent_id
+        self.assistant_reply = assistant_reply
+        self.agent_manager = AgentManager(cfg, agents)
 
     def start_interaction_loop(self):
         # Interaction Loop
@@ -117,6 +133,7 @@ class Agent:
                     self.full_message_history,
                     self.memory,
                     cfg.fast_token_limit,
+                    cfg,
                 )  # TODO: This hardcodes the model to use GPT3.5. Make this an argument
 
             assistant_reply_json = fix_json_using_multiple_techniques(assistant_reply)
@@ -331,3 +348,160 @@ class Agent:
             [{"role": "user", "content": feedback_prompt + feedback_thoughts}],
             llm_model,
         )
+
+    def single_step(self, command_name: str, arguments: str):
+        # Send message to AI, get response
+        self.user_input = (
+            self.arguments
+            if command_name == "human_feedback"
+            else "GENERATE NEXT COMMAND JSON"
+        )
+        godmode_log = ""
+        godmode_log += logger.typewriter_log(
+            "NEXT ACTION: ",
+            Fore.CYAN,
+            f"COMMAND = {Fore.CYAN}{command_name}{Style.RESET_ALL}"
+            f"  ARGUMENTS = {Fore.CYAN}{arguments}{Style.RESET_ALL}",
+        )
+
+        # Execute command
+        if command_name is not None and command_name.lower().startswith("error"):
+            result = f"Command {command_name} threw the following error: {arguments}"
+        elif command_name == "human_feedback":
+            result = f"Human feedback: {self.user_input}"
+        else:
+            result = (
+                f"Command {command_name} returned: "
+                f"{execute_command(command_name or '', arguments, self.cfg)}"
+            )
+            if self.next_action_count > 0:
+                self.next_action_count -= 1
+
+        memory_to_add = (
+            f"Assistant Reply: {self.assistant_reply} "
+            f"\nResult: {result} "
+            f"\nHuman Feedback: {self.user_input} "
+        )
+
+        self.memory.add(memory_to_add)
+
+        # Check if there's a result from the command append it to the message
+        # history
+        if result is not None:
+            self.full_message_history.append(create_chat_message("system", result))
+            godmode_log += logger.typewriter_log("SYSTEM: ", Fore.YELLOW, result)
+        else:
+            self.full_message_history.append(
+                create_chat_message("system", "Unable to execute command")
+            )
+            godmode_log += logger.typewriter_log(
+                "SYSTEM: ", Fore.YELLOW, "Unable to execute command"
+            )
+
+        self.assistant_reply = chat_with_ai(
+            self.system_prompt,
+            self.triggering_prompt,
+            self.full_message_history,
+            self.memory,
+            self.cfg.fast_token_limit,
+            self.cfg,
+        )
+
+        self.assistant_reply_json = fix_json_using_multiple_techniques(
+            self.assistant_reply, self.cfg
+        )
+
+        thoughts = {}
+
+        # Print Assistant thoughts
+        if self.assistant_reply_json != {}:
+            # validate_json(self.assistant_reply_json, 'llm_response_format_1')
+            # Get command name and arguments
+            try:
+                log, thoughts = print_assistant_thoughts(
+                    self.ai_name, self.assistant_reply_json
+                )
+                godmode_log += log
+                c, self.arguments = get_command(self.assistant_reply_json)  # type: ignore
+                self.command_name = c or "None"
+                # command_name, arguments = assistant_reply_json_valid["command"]["name"], assistant_reply_json_valid["command"]["args"]
+            except Exception as e:
+                godmode_log += "Error: \n" + str(e)
+
+        # upload log
+        ai_info = f"You are {self.ai_name}, {self.ai_role}\nGOALS:\n\n"
+        for i, goal in enumerate(self.ai_goals):
+            ai_info += f"{i+1}. {goal}\n"
+
+        upload_log(
+            ai_info + "\n\n" + memory_to_add + "\n\n" + godmode_log, self.agent_id
+        )
+
+        return (
+            self.command_name,
+            self.arguments,
+            thoughts,
+            self.full_message_history,
+            self.assistant_reply,
+            result,
+        )
+
+    def start_agent(self, name: str, task: str, prompt: str, model=None) -> str:
+        """Start an agent with a given name, task, and prompt
+
+        Args:
+            name (str): The name of the agent
+            task (str): The task of the agent
+            prompt (str): The prompt for the agent
+            model (str): The model to use for the agent
+
+        Returns:
+            str: The response of the agent
+        """
+        if model is None:
+            model = self.cfg.fast_llm_model
+
+        # Remove underscores from name
+        voice_name = name.replace("_", " ")
+
+        first_message = f"""You are {name}.  Respond with: "Acknowledged"."""
+        agent_intro = f"{voice_name} here, Reporting for duty!"
+
+        key, ack = self.agent_manager.create_agent(task, first_message, model, self)
+
+        # Assign task (prompt), get response
+        agent_response = self.agent_manager.message_agent(key, prompt, self)
+
+        return f"Agent {name} created with key {key}. First response: {agent_response}"
+
+    def message_agent(self, key: str, message: str) -> str:
+        """Message an agent with a given key and message"""
+        # Check if the key is a valid integer
+        if is_valid_int(key):
+            agent_response = self.agent_manager.message_agent(int(key), message, self)
+        else:
+            return "Invalid key, must be an integer."
+
+        return agent_response
+
+    def list_agents(self):
+        """List all agents
+
+        Returns:
+            str: A list of all agents
+        """
+        return "List of agents:\n" + "\n".join(
+            [str(x[0]) + ": " + x[1] for x in self.agent_manager.list_agents()]
+        )
+
+    def delete_agent(self, key: str) -> str:
+        """Delete an agent with a given key
+
+        Args:
+            key (str): The key of the agent to delete
+
+        Returns:
+            str: A message indicating whether the agent was deleted or not
+        """
+        result = self.agent_manager.delete_agent(key)
+        return f"Agent {key} deleted." if result else f"Agent {key} does not exist."

@@ -5,16 +5,18 @@ from typing import List
 
 from autogpt.config.config import Config
 from autogpt.llm import Message, create_chat_completion
-from autogpt.singleton import Singleton
 
-
-class AgentManager(metaclass=Singleton):
+class AgentManager():
     """Agent manager for managing GPT agents"""
 
-    def __init__(self):
-        self.next_key = 0
-        self.agents = {}  # key, (task, full_message_history, model)
-        self.cfg = Config()
+    agents: dict[int, tuple[str, list[dict[str, str]], str]]
+
+    def __init__(self, cfg: Config, agents={}):
+        self.next_key = len(
+            agents.keys()
+        )
+        self.cfg = cfg
+        self.agents = agents  # key, (task, full_message_history, model)
 
     # Create new GPT agent
     # TODO: Centralise use of create_chat_completion() to globally enforce token limit
@@ -42,6 +44,7 @@ class AgentManager(metaclass=Singleton):
         agent_reply = create_chat_completion(
             model=model,
             messages=messages,
+            cfg=self.cfg,
         )
 
         messages.append({"role": "assistant", "content": agent_reply})
@@ -96,6 +99,7 @@ class AgentManager(metaclass=Singleton):
         agent_reply = create_chat_completion(
             model=model,
             messages=messages,
+            cfg=self.cfg,
         )
 
         messages.append({"role": "assistant", "content": agent_reply})

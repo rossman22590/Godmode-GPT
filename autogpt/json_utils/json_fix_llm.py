@@ -29,12 +29,13 @@ JSON_SCHEMA = """
         "reasoning": "reasoning",
         "plan": "- short bulleted\n- list that conveys\n- long-term plan",
         "criticism": "constructive self-criticism",
-        "speak": "thoughts summary to say to user"
+        "speak": "thoughts summary to say to user",
+        "relevant_goal": "a single number representing which goal is most relevant to the current task"
     }
 }
 """
 
-CFG = Config()
+global_config = Config()
 
 
 def auto_fix_json(json_string: str, schema: str) -> str:
@@ -63,7 +64,7 @@ def auto_fix_json(json_string: str, schema: str) -> str:
     if not json_string.startswith("`"):
         json_string = "```json\n" + json_string + "\n```"
     result_string = call_ai_function(
-        function_string, args, description_string, model=CFG.fast_llm_model
+        function_string, args, description_string, model=global_config.fast_llm_model
     )
     logger.debug("------------ JSON FIX ATTEMPT ---------------")
     logger.debug(f"Original JSON: {json_string}")
@@ -82,7 +83,7 @@ def auto_fix_json(json_string: str, schema: str) -> str:
         return "failed"
 
 
-def fix_json_using_multiple_techniques(assistant_reply: str) -> Dict[Any, Any]:
+def fix_json_using_multiple_techniques(assistant_reply: str, cfg: Config) -> Dict[Any, Any]:
     """Fix the given JSON string to make it parseable and fully compliant with two techniques.
 
     Args:
@@ -110,11 +111,11 @@ def fix_json_using_multiple_techniques(assistant_reply: str) -> Dict[Any, Any]:
         pass
 
     # Parse and print Assistant response
-    assistant_reply_json = fix_and_parse_json(assistant_reply)
+    assistant_reply_json = fix_and_parse_json(assistant_reply, cfg=cfg)
     logger.debug("Assistant reply JSON: %s", str(assistant_reply_json))
     if assistant_reply_json == {}:
         assistant_reply_json = attempt_to_fix_json_by_finding_outermost_brackets(
-            assistant_reply
+            assistant_reply, cfg=cfg,
         )
 
     logger.debug("Assistant reply JSON 2: %s", str(assistant_reply_json))
@@ -125,14 +126,14 @@ def fix_json_using_multiple_techniques(assistant_reply: str) -> Dict[Any, Any]:
         "Error: The following AI output couldn't be converted to a JSON:\n",
         assistant_reply,
     )
-    if CFG.speak_mode:
+    if global_config.speak_mode:
         say_text("I have received an invalid JSON response from the OpenAI API.")
 
     return {}
 
 
 def fix_and_parse_json(
-    json_to_load: str, try_to_fix_with_gpt: bool = True
+    json_to_load: str, cfg: Config, try_to_fix_with_gpt: bool = True
 ) -> Dict[Any, Any]:
     """Fix and parse JSON string
 
@@ -166,11 +167,11 @@ def fix_and_parse_json(
         maybe_fixed_json = maybe_fixed_json[: last_brace_index + 1]
         return json.loads(maybe_fixed_json)
     except (json.JSONDecodeError, ValueError) as e:
-        return try_ai_fix(try_to_fix_with_gpt, e, json_to_load)
+        return try_ai_fix(try_to_fix_with_gpt, e, json_to_load, cfg=cfg)
 
 
 def try_ai_fix(
-    try_to_fix_with_gpt: bool, exception: Exception, json_to_load: str
+    try_to_fix_with_gpt: bool, exception: Exception, json_to_load: str, cfg: Config
 ) -> Dict[Any, Any]:
     """Try to fix the JSON with the AI
 
@@ -187,7 +188,7 @@ def try_ai_fix(
     """
     if not try_to_fix_with_gpt:
         raise exception
-    if CFG.debug_mode:
+    if global_config.debug_mode:
         logger.warn(
             "Warning: Failed to parse AI output, attempting to fix."
             "\n If you see this warning frequently, it's likely that"
@@ -205,8 +206,8 @@ def try_ai_fix(
     return {}
 
 
-def attempt_to_fix_json_by_finding_outermost_brackets(json_string: str):
-    if CFG.speak_mode and CFG.debug_mode:
+def attempt_to_fix_json_by_finding_outermost_brackets(json_string: str, cfg: Config):
+    if global_config.speak_mode and global_config.debug_mode:
         say_text(
             "I have received an invalid JSON response from the OpenAI API. "
             "Trying to fix it now."
@@ -223,17 +224,17 @@ def attempt_to_fix_json_by_finding_outermost_brackets(json_string: str):
             logger.typewriter_log(
                 title="Apparently json was fixed.", title_color=Fore.GREEN
             )
-            if CFG.speak_mode and CFG.debug_mode:
+            if global_config.speak_mode and global_config.debug_mode:
                 say_text("Apparently json was fixed.")
         else:
             return {}
 
     except (json.JSONDecodeError, ValueError):
-        if CFG.debug_mode:
+        if global_config.debug_mode:
             logger.error(f"Error: Invalid JSON: {json_string}\n")
-        if CFG.speak_mode:
+        if global_config.speak_mode:
             say_text("Didn't work. I will have to ignore this response then.")
         logger.error("Error: Invalid JSON, setting it to empty JSON now.\n")
         json_string = {}
 
-    return fix_and_parse_json(json_string)
+    return fix_and_parse_json(json_string, cfg, False)
