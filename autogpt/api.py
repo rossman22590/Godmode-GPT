@@ -15,13 +15,15 @@ from openai.error import OpenAIError
 import firebase_admin
 from firebase_admin import auth as firebase_auth
 from autogpt.llm import create_chat_completion
-from autogpt.api_utils import (
+from autogpt.api_log import (
     CRITICAL,
     ERROR,
     WARNING,
+    print_log,
+)
+from autogpt.api_utils import (
     generate_task_name,
     get_file_urls,
-    print_log,
 )
 import logging
 from autogpt.agent.agent import Agent

@@ -73,7 +73,7 @@ class Config():
             "BROWSE_SPACY_LANGUAGE_MODEL", "en_core_web_sm"
         )
 
-        self.openai_api_key = "SHOULDN'T BE USED" # type: ignore
+        self.openai_api_key = os.getenv("OPENAI_API_KEY") # type: ignore
         self.temperature = float(os.getenv("TEMPERATURE", "0"))
         self.use_azure = os.getenv("USE_AZURE") == "True"
         self.execute_local_commands = (

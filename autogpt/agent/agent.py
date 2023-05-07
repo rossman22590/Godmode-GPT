@@ -4,7 +4,7 @@ from colorama import Fore, Style
 from autogpt.agent_manager import AgentManager
 from autogpt.api_utils import upload_log
 
-from autogpt.app import execute_command, get_command, is_valid_int
+from autogpt.app import execute_command, get_command
 from autogpt.config import Config
 from autogpt.json_utils.json_fix_llm import fix_json_using_multiple_techniques
 from autogpt.json_utils.utilities import LLM_DEFAULT_RESPONSE_FORMAT, validate_json

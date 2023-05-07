@@ -1,22 +1,12 @@
 """File operations for AutoGPT"""
 from __future__ import annotations
 
-import hashlib
-import os
-import os.path
-from typing import Dict, Generator, Literal, Tuple
+from typing import Literal
 
-import charset_normalizer
-import requests
-from colorama import Back, Fore
-from requests.adapters import HTTPAdapter, Retry
 from autogpt.api_utils import get_file, list_files, write_file
 
 from autogpt.commands.command import command
 from autogpt.config import Config
-from autogpt.logs import logger
-from autogpt.spinner import Spinner
-from autogpt.utils import readable_file_size
 
 global_config = Config()
 
@@ -56,7 +46,7 @@ def write_to_file(filename: str, text: str, cfg, **kwargs):
 @command(
     "append_to_file", "Append to file", '"filename": "<filename>", "text": "<text>"'
 )
-def append_to_file(filename: str, append_text: str, should_log: bool = True, cfg = None, **kwargs) -> str:
+def append_to_file(filename: str, append_text: str, should_log: bool = True, cfg = None, **kwargs) -> None:
     """Append text to a file
 
     Args:

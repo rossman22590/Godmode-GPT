@@ -1,6 +1,6 @@
 import pinecone
 from colorama import Fore, Style
-from autogpt.api_utils import CRITICAL, ERROR, print_log
+from autogpt.api_log import CRITICAL, ERROR, print_log
 
 from autogpt.llm import get_ada_embedding
 from autogpt.memory.base import MemoryProvider

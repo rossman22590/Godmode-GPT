@@ -2,6 +2,7 @@ import time
 from random import shuffle
 
 from openai.error import RateLimitError
+from autogpt.api_log import print_log
 
 from autogpt.config import Config
 from autogpt.llm.api_manager import ApiManager
@@ -164,14 +165,16 @@ def chat_with_ai(
                     current_context=current_context,
                     last_memory_index=agent.last_memory_index,
                 )
-
-                agent.summary_memory = update_running_summary(
-                    agent,
-                    current_memory=agent.summary_memory,
-                    new_events=newly_trimmed_messages,
-                    cfg=cfg,
-                )
-                current_context.insert(insertion_index, agent.summary_memory)
+                try:
+                    agent.summary_memory = update_running_summary(
+                        agent,
+                        current_memory=agent.summary_memory,
+                        new_events=newly_trimmed_messages,
+                        cfg=cfg,
+                    )
+                    current_context.insert(insertion_index, agent.summary_memory)
+                except Exception as e:
+                    print_log("Error updating summary memory:", severity="warning", errorMsg=str(e))
 
             api_manager = ApiManager()
             # inform the AI about its remaining budget (if it has one)
