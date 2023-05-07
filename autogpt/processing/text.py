@@ -86,14 +86,14 @@ def summarize_text(
     if not text:
         return "Error: No text to summarize"
 
-    model = global_config.fast_llm_model
+    model = cfg.fast_llm_model
     text_length = len(text)
     logger.info(f"Text length: {text_length} characters")
 
     summaries = []
     chunks = list(
         split_text(
-            text, max_length=global_config.browse_chunk_max_length, model=model, question=question
+            text, max_length=cfg.browse_chunk_max_length, model=model, question=question
         ),
     )
     scroll_ratio = 1 / len(chunks)
@@ -105,7 +105,7 @@ def summarize_text(
 
         memory_to_add = f"Source: {url}\n" f"Raw content part#{i + 1}: {chunk}"
 
-        memory = get_memory(global_config)
+        memory = get_memory(cfg)
         memory.add(memory_to_add)
 
         messages = [create_message(chunk, question)]

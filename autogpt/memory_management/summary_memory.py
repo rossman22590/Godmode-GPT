@@ -33,10 +33,9 @@ def get_newly_trimmed_messages(
 
     # Remove messages that are already present in current_context
     new_messages_not_in_context = [
-        msg for msg in new_messages if msg not in current_context
+        msg for msg in new_messages if msg not in current_context and len(msg["content"]) < 4000
     ]
-    if len(new_messages_not_in_context) > 5:
-        new_messages_not_in_context = new_messages_not_in_context[-5:]
+
 
     # Find the index of the last message processed
     new_index = last_memory_index
@@ -71,21 +70,24 @@ def update_running_summary(
 
     # Replace "assistant" with "you". This produces much better first person past tense results.
     for event in new_events:
-        if event["role"].lower() == "assistant":
-            event["role"] = "you"
+        try:
+            if event["role"].lower() == "assistant":
+                event["role"] = "you"
 
-            # Remove "thoughts" dictionary from "content"
-            content_dict = json.loads(event["content"])
-            if "thoughts" in content_dict:
-                del content_dict["thoughts"]
-            event["content"] = json.dumps(content_dict)
+                # Remove "thoughts" dictionary from "content"
+                content_dict = json.loads(event["content"])
+                if "thoughts" in content_dict:
+                    del content_dict["thoughts"]
+                event["content"] = json.dumps(content_dict)
 
-        elif event["role"].lower() == "system":
-            event["role"] = "your computer"
+            elif event["role"].lower() == "system":
+                event["role"] = "your computer"
 
-        # Delete all user messages
-        elif event["role"] == "user":
-            new_events.remove(event)
+            # Delete all user messages
+            elif event["role"] == "user":
+                new_events.remove(event)
+        except Exception:
+            pass
 
     # This can happen at any point during execution, not just the beginning
     if len(new_events) == 0:

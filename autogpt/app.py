@@ -140,7 +140,7 @@ def execute_command(
 
 
 @command(
-    "get_text_summary", "Get text summary", '"url": "<url>", "question": "<question>"'
+    "get_text_summary", "Get text summary from a single URL", '"url": "<single url>", "question": "<question>"'
 )
 @validate_url
 def get_text_summary(url: str, question: str, cfg: Config, **kwargs) -> str:
@@ -158,7 +158,7 @@ def get_text_summary(url: str, question: str, cfg: Config, **kwargs) -> str:
     return f""" "Result" : {summary}"""
 
 
-@command("get_hyperlinks", "Get text summary", '"url": "<url>"')
+@command("get_hyperlinks", "Get text summary from a single URL", '"url": "<single url>"')
 @validate_url
 def get_hyperlinks(url: str, **kwargs) -> Union[str, List[str]]:
     """Return the results of a Google search
