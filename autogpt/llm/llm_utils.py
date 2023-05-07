@@ -71,7 +71,7 @@ def retry_openai_api(
 
 
 def call_ai_function(
-    function: str, args: list, description: str, model: str | None = None
+    function: str, args: list, description: str, cfg: Config, model: str | None = None
 ) -> str:
     """Call an AI function
 
@@ -87,7 +87,6 @@ def call_ai_function(
     Returns:
         str: The response from the function
     """
-    cfg = Config()
     if model is None:
         model = cfg.smart_llm_model
     # For each arg, if any are None, convert to "None":
@@ -103,7 +102,7 @@ def call_ai_function(
         {"role": "user", "content": args},
     ]
 
-    return create_chat_completion(model=model, messages=messages, temperature=0)
+    return create_chat_completion(cfg=cfg,model=model, messages=messages, temperature=0)
 
 
 # Overly simple abstraction until we create something better
@@ -151,57 +150,33 @@ def create_chat_completion(
                 return message
     api_manager = ApiManager()
     response = None
-    for attempt in range(num_retries):
-        backoff = 2 ** (attempt + 2)
-        try:
-            if cfg.use_azure:
-                response = api_manager.create_chat_completion(
-                    deployment_id=cfg.get_azure_deployment_id_for_model(model),
-                    model=model,
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                )
-            else:
-                response = api_manager.create_chat_completion(
-                    model=model,
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                )
-            break
-        except RateLimitError:
-            logger.debug(
-                f"{Fore.RED}Error: ", f"Reached rate limit, passing...{Fore.RESET}"
-            )
-            if not warned_user:
-                logger.double_check(
-                    f"Please double check that you have setup a {Fore.CYAN + Style.BRIGHT}PAID{Style.RESET_ALL} OpenAI API Account. "
-                    + f"You can read more here: {Fore.CYAN}https://docs.agpt.co/setup/#getting-an-api-key{Fore.RESET}"
-                )
-                warned_user = True
-        except (APIError, Timeout) as e:
-            if e.http_status != 502:
-                raise
-            if attempt == num_retries - 1:
-                raise
+    try:
+        response = api_manager.create_chat_completion(
+            cfg=cfg,
+            model=model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+    except RateLimitError:
         logger.debug(
-            f"{Fore.RED}Error: ",
-            f"API Bad gateway. Waiting {backoff} seconds...{Fore.RESET}",
+            f"{Fore.RED}Error: ", f"Reached rate limit, passing...{Fore.RESET}"
         )
-        time.sleep(backoff)
+        if not warned_user:
+            logger.double_check(
+                f"Please double check that you have setup a {Fore.CYAN + Style.BRIGHT}PAID{Style.RESET_ALL} OpenAI API Account. "
+                + f"You can read more here: {Fore.CYAN}https://docs.agpt.co/setup/#getting-an-api-key{Fore.RESET}"
+            )
+            warned_user = True
+    except (APIError, Timeout) as e:
+        if e.http_status != 502:
+            raise
+        if attempt == num_retries - 1:
+            raise
+        
     if response is None:
-        logger.typewriter_log(
-            "FAILED TO GET RESPONSE FROM OPENAI",
-            Fore.RED,
-            "Auto-GPT has failed to get a response from OpenAI's services. "
-            + f"Try running Auto-GPT again, and if the problem the persists try running it with `{Fore.CYAN}--debug{Fore.RESET}`.",
-        )
-        logger.double_check()
-        if cfg.debug_mode:
-            raise RuntimeError(f"Failed to get response after {num_retries} retries")
-        else:
-            quit(1)
+        return "OpenAI API error"
+
     resp = response.choices[0].message["content"]
     for plugin in cfg.plugins:
         if not plugin.can_handle_on_response():
@@ -227,7 +202,7 @@ def chunked_tokens(text, tokenizer_name, chunk_length):
     yield from chunks_iterator
 
 
-def get_ada_embedding(text: str) -> List[float]:
+def get_ada_embedding(text: str, cfg: Config) -> List[float]:
     """Get an embedding from the ada model.
 
     Args:
@@ -236,7 +211,6 @@ def get_ada_embedding(text: str) -> List[float]:
     Returns:
         List[float]: The embedding.
     """
-    cfg = Config()
     model = cfg.embedding_model
     text = text.replace("\n", " ")
 
@@ -245,13 +219,13 @@ def get_ada_embedding(text: str) -> List[float]:
     else:
         kwargs = {"model": model}
 
-    embedding = create_embedding(text, **kwargs)
+    embedding = create_embedding(text, cfg, **kwargs)
     return embedding
 
 
-@retry_openai_api()
 def create_embedding(
     text: str,
+    cfg: Config,
     *_,
     **kwargs,
 ) -> openai.Embedding:
@@ -264,7 +238,6 @@ def create_embedding(
     Returns:
         openai.Embedding: The embedding object.
     """
-    cfg = Config()
     chunk_embeddings = []
     chunk_lengths = []
     for chunk in chunked_tokens(

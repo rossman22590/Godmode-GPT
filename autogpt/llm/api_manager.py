@@ -24,6 +24,7 @@ class ApiManager(metaclass=Singleton):
     def create_chat_completion(
         self,
         messages: list,  # type: ignore
+        cfg: Config,
         model: str | None = None,
         temperature: float = None,
         max_tokens: int | None = None,
@@ -39,7 +40,6 @@ class ApiManager(metaclass=Singleton):
         Returns:
         str: The AI's response.
         """
-        cfg = Config()
         if temperature is None:
             temperature = cfg.temperature
         if deployment_id is not None:

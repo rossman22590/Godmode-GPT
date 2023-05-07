@@ -7,8 +7,6 @@ from autogpt.config import Config
 from autogpt.llm.llm_utils import create_chat_completion
 from autogpt.log_cycle.log_cycle import PROMPT_SUMMARY_FILE_NAME, SUMMARY_FILE_NAME
 
-cfg = Config()
-
 
 def get_newly_trimmed_messages(
     full_message_history: List[Dict[str, str]],
@@ -37,6 +35,8 @@ def get_newly_trimmed_messages(
     new_messages_not_in_context = [
         msg for msg in new_messages if msg not in current_context
     ]
+    if len(new_messages_not_in_context) > 5:
+        new_messages_not_in_context = new_messages_not_in_context[-5:]
 
     # Find the index of the last message processed
     new_index = last_memory_index
@@ -48,7 +48,7 @@ def get_newly_trimmed_messages(
 
 
 def update_running_summary(
-    agent: Agent, current_memory: str, new_events: List[Dict[str, str]]
+    agent: Agent, current_memory: str, new_events: List[Dict[str, str]], cfg: Config
 ) -> str:
     """
     This function takes a list of dictionaries representing new events and combines them with the current summary,

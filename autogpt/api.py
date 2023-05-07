@@ -49,9 +49,9 @@ def new_interact(
     memory: PineconeMemory,
     command_name: str,
     arguments: str,
-    assistant_reply: str,  # TODO: fetch from Datastore
+    assistant_reply: str,
     agent_id: str,
-    full_message_history=[],  # TODO: fetch from Datastore
+    full_message_history=[],
 ):
     key = client.key("Agent", agent_id)
 
@@ -97,6 +97,12 @@ def new_interact(
     prompt_generator = build_default_prompt_generator()
     system_prompt = ai_config.construct_full_prompt(prompt_generator)
 
+    agent = fireclient.collection("Agent").document(agent_id).get()
+    try:
+        summary = agent.get("summary") or None
+    except Exception as e:
+        summary = None
+
     agent = Agent(
         ai_name=ai_config.ai_name,
         ai_role=ai_config.ai_role,
@@ -115,6 +121,7 @@ def new_interact(
         command_registry=command_registry,
         config=ai_config,
         prompt_generator=prompt_generator,
+        summary_memory=summary,
     )
 
     (
@@ -466,6 +473,8 @@ def godmode_main():
     except Exception as e:
         if isinstance(e, OpenAIError):
             print_log("OpenAI error", severity=WARNING, errorMsg=e)
+            # print trace
+            traceback.print_exc()
             return e.error, 503
 
         print_log("/api error", severity=ERROR, errorMsg=e)

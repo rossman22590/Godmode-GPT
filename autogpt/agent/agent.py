@@ -74,15 +74,16 @@ class Agent:
         assistant_reply: str,
         agents: dict[int, tuple[str, list[dict[str, str]], str]],
         prompt_generator: PromptGenerator,
+        summary_memory = (
+            "I was created."  # Initial memory necessary to avoid hallucination
+        ),
     ):
         self.cfg = cfg
         self.ai_name = ai_name
         self.ai_role = ai_role
         self.ai_goals = ai_goals
         self.memory = memory
-        self.summary_memory = (
-            "I was created."  # Initial memory necessary to avoid hallucination
-        )
+        self.summary_memory = summary_memory
         self.last_memory_index = 0
         self.full_message_history = full_message_history
         self.next_action_count = next_action_count

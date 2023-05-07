@@ -169,6 +169,7 @@ def chat_with_ai(
                     agent,
                     current_memory=agent.summary_memory,
                     new_events=newly_trimmed_messages,
+                    cfg=cfg,
                 )
                 current_context.insert(insertion_index, agent.summary_memory)
 

@@ -44,7 +44,7 @@ class PineconeMemory(MemoryProvider):
         self.index = pinecone.Index(table_name)
 
     def add(self, data):
-        vector = get_ada_embedding(data)
+        vector = get_ada_embedding(data, self.cfg)
         # no metadata here. We may wish to change that long term.
         data = [(str(self.vec_num), vector, {"raw_text": data})]
         namespace = self.cfg.agent_id
@@ -73,7 +73,7 @@ class PineconeMemory(MemoryProvider):
         :param data: The data to compare to.
         :param num_relevant: The number of relevant data to return. Defaults to 5
         """
-        query_embedding = get_ada_embedding(data)
+        query_embedding = get_ada_embedding(data, self.cfg)
 
         namespace = self.cfg.agent_id
         try:

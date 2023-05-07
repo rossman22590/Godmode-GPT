@@ -169,6 +169,7 @@ def get_hyperlinks(url: str, **kwargs) -> Union[str, List[str]]:
     Returns:
         str or list: The hyperlinks on the page
     """
+    
     return scrape_links(url)
 
 
