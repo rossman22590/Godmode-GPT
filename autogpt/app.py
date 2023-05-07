@@ -95,6 +95,7 @@ def execute_command(
     arguments,
     prompt: PromptGenerator,
     cfg: Config,
+    agent_manager: AgentManager,
 ):
     """Execute the command and return the result
 
@@ -110,7 +111,7 @@ def execute_command(
 
         # If the command is found, call it with the provided arguments
         if cmd:
-            return cmd(**arguments)
+            return cmd(**arguments, cfg=cfg, agent_manager=agent_manager)
 
         # TODO: Remove commands below after they are moved to the command registry.
         command_name = map_command_synonyms(command_name.lower())
@@ -127,7 +128,7 @@ def execute_command(
                     command_name == command["label"].lower()
                     or command_name == command["name"].lower()
                 ):
-                    return command["function"](**arguments)
+                    return command["function"](**arguments, cfg=cfg, agent_manager=agent_manager)
             return (
                 f"Unknown command '{command_name}'. Please refer to the 'COMMANDS'"
                 " list for available commands and only respond in the specified JSON"
@@ -158,7 +159,7 @@ def get_text_summary(url: str, question: str, cfg: Config, **kwargs) -> str:
 
 @command("get_hyperlinks", "Get text summary", '"url": "<url>"')
 @validate_url
-def get_hyperlinks(url: str) -> Union[str, List[str]]:
+def get_hyperlinks(url: str, **kwargs) -> Union[str, List[str]]:
     """Return the results of a Google search
 
     Args:
@@ -209,7 +210,7 @@ def start_agent(name: str, task: str, prompt: str, cfg: Config, agent_manager: A
 
 
 @command("message_agent", "Message GPT Agent", '"key": "<key>", "message": "<message>"')
-def message_agent(key: str, message: str, agent_manager: AgentManager) -> str:
+def message_agent(key: str, message: str, agent_manager: AgentManager, **kwargs) -> str:
     """Message an agent with a given key and message"""
     # Check if the key is a valid integer
     if is_valid_int(key):

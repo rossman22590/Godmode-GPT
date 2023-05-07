@@ -144,7 +144,7 @@ def split_file(
 
 
 @command("read_file", "Read file", '"filename": "<filename>"')
-def read_file(filename: str) -> str:
+def read_file(filename: str, **kwargs) -> str:
     """Read a file and return the contents
 
     Args:
@@ -197,7 +197,7 @@ def ingest_file(
 
 
 @command("write_to_file", "Write to file", '"filename": "<filename>", "text": "<text>"')
-def write_to_file(filename: str, text: str) -> str:
+def write_to_file(filename: str, text: str, **kwargs) -> str:
     """Write text to a file
 
     Args:
@@ -224,7 +224,7 @@ def write_to_file(filename: str, text: str) -> str:
 @command(
     "append_to_file", "Append to file", '"filename": "<filename>", "text": "<text>"'
 )
-def append_to_file(filename: str, text: str, should_log: bool = True) -> str:
+def append_to_file(filename: str, text: str, should_log: bool = True, **kwargs) -> str:
     """Append text to a file
 
     Args:
@@ -252,7 +252,7 @@ def append_to_file(filename: str, text: str, should_log: bool = True) -> str:
 
 
 @command("delete_file", "Delete file", '"filename": "<filename>"')
-def delete_file(filename: str) -> str:
+def delete_file(filename: str, **kwargs) -> str:
     """Delete a file
 
     Args:
@@ -272,7 +272,7 @@ def delete_file(filename: str) -> str:
 
 
 @command("list_files", "List Files in Directory", '"directory": "<directory>"')
-def list_files(directory: str) -> list[str]:
+def list_files(directory: str, **kwargs) -> list[str]:
     """lists files in a directory recursively
 
     Args:
@@ -302,7 +302,7 @@ def list_files(directory: str) -> list[str]:
     global_config.allow_downloads,
     "Error: You do not have user authorization to download files locally.",
 )
-def download_file(url, filename):
+def download_file(url, filename, **kwargs):
     """Downloads a file
     Args:
         url (str): URL of the file to download

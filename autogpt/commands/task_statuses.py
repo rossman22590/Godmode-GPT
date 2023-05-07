@@ -12,7 +12,7 @@ from autogpt.logs import logger
     "Task Complete (Shutdown)",
     '"reason": "<reason>"',
 )
-def task_complete(reason: str) -> NoReturn:
+def task_complete(reason: str, **kwargs) -> NoReturn:
     """
     A function that takes in a string and exits the program
 
