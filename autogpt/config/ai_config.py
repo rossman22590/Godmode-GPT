@@ -11,6 +11,7 @@ from typing import Any, Optional, Type
 
 import distro
 import yaml
+from autogpt.commands.command import CommandRegistry
 
 from autogpt.prompts.generator import PromptGenerator
 
@@ -28,6 +29,8 @@ class AIConfig:
         ai_goals (list): The list of objectives the AI is supposed to complete.
         api_budget (float): The maximum dollar value for API calls (0.0 means infinite)
     """
+
+    command_registry: Optional[CommandRegistry]
 
     def __init__(
         self,

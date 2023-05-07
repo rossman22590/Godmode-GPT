@@ -116,7 +116,7 @@ def create_directory_if_not_exists(directory_path: str) -> bool:
     """
     if not os.path.exists(directory_path):
         try:
-            os.makedirs(directory_path)
+            os.makedirs(directory_path, exist_ok=True)
             logger.debug(f"Created directory: {directory_path}")
             return True
         except OSError as e:

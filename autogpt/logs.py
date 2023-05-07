@@ -5,7 +5,7 @@ import random
 import re
 import time
 from logging import LogRecord
-from typing import Any
+from typing import Any, Tuple
 
 from colorama import Fore, Style
 
@@ -30,7 +30,7 @@ class Logger(metaclass=Singleton):
         this_files_dir_path = os.path.dirname(__file__)
         log_dir = os.path.join(this_files_dir_path, "../logs")
         if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
+            os.makedirs(log_dir, exist_ok=True)
 
         log_file = "activity.log"
         error_file = "error.log"
@@ -254,10 +254,10 @@ logger = Logger()
 
 
 def print_assistant_thoughts(
-    ai_name: object,
+    ai_name: str,
     assistant_reply_json_valid: object,
     speak_mode: bool = False,
-) -> None:
+) -> Tuple[str, dict]:
     log = ""
     assistant_thoughts_reasoning = None
     assistant_thoughts_plan = None

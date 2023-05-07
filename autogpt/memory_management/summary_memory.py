@@ -120,7 +120,7 @@ Latest Development:
         PROMPT_SUMMARY_FILE_NAME,
     )
 
-    current_memory = create_chat_completion(messages, cfg.fast_llm_model)
+    current_memory = create_chat_completion(messages, cfg, cfg.fast_llm_model)
 
     agent.log_cycle_handler.log_cycle(
         agent.config.ai_name,

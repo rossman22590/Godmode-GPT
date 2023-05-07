@@ -5,15 +5,16 @@ import logging
 import time
 import traceback
 from uuid import uuid4
+from autogpt.commands.command import CommandRegistry
 from autogpt.config.ai_config import AIConfig
 from autogpt.memory import get_memory
-import autogpt.chat as chat
+import autogpt.llm.chat as chat
 from autogpt.config import Config
 import os
 from openai.error import OpenAIError
 import firebase_admin
 from firebase_admin import auth as firebase_auth
-from autogpt.llm_utils import create_chat_completion
+from autogpt.llm import create_chat_completion
 from autogpt.api_utils import (
     CRITICAL,
     ERROR,
@@ -29,9 +30,9 @@ from autogpt.config import Config
 from autogpt.logs import logger
 from autogpt.memory import get_memory
 from autogpt.memory.pinecone import PineconeMemory
-from google.cloud import datastore
+from google.cloud import datastore, firestore
 
-from google.cloud import firestore
+from autogpt.prompts.prompt import build_default_prompt_generator, construct_main_ai_config
 
 fireclient = firestore.Client()
 
@@ -55,7 +56,6 @@ def new_interact(
     key = client.key("Agent", agent_id)
 
     logger.set_level(logging.DEBUG if cfg.debug_mode else logging.INFO)
-    system_prompt = ai_config.construct_full_prompt()
     # print(prompt)
     # Initialize variables
     next_action_count = 0
@@ -69,6 +69,32 @@ def new_interact(
 
     # limit to 100 entries
     full_message_history = full_message_history[-100:]
+
+    command_registry = CommandRegistry()
+
+    command_categories = [
+        # "autogpt.commands.analyze_code",
+        # "autogpt.commands.audio_text",
+        # "autogpt.commands.execute_code",
+        # "autogpt.commands.file_operations",
+        # "autogpt.commands.git_operations",
+        "autogpt.commands.google_search",
+        # "autogpt.commands.image_gen",
+        # "autogpt.commands.improve_code",
+        # "autogpt.commands.twitter",
+        # "autogpt.commands.web_selenium",
+        # "autogpt.commands.write_tests",
+        "autogpt.app",
+        "autogpt.commands.task_statuses",
+    ]
+    
+    for command_category in command_categories:
+        command_registry.import_commands(command_category)
+
+    ai_config.command_registry = command_registry
+
+    prompt_generator = build_default_prompt_generator()
+    system_prompt = ai_config.construct_full_prompt(prompt_generator)
 
     agent = Agent(
         ai_name=ai_config.ai_name,
@@ -85,6 +111,9 @@ def new_interact(
         memory=memory,
         next_action_count=next_action_count,
         cfg=cfg,
+        command_registry=command_registry,
+        config=ai_config,
+        prompt_generator=prompt_generator,
     )
 
     (

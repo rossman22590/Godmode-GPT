@@ -3,9 +3,9 @@ import time
 from typing import Union
 from flask import request
 from google.cloud import storage
-from autogpt import chat
+from autogpt.llm import chat
 
-from autogpt.llm_utils import create_chat_completion
+from autogpt.llm import create_chat_completion
 
 private_bucket_name = "godmode-ai"
 public_bucket_name = "godmode-public"

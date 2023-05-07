@@ -261,7 +261,7 @@ def test_list_files(workspace: Workspace, test_directory: Path):
 
     # Create a subdirectory and place a copy of file_a in it
     if not os.path.exists(test_directory):
-        os.makedirs(test_directory)
+        os.makedirs(test_directory, exist_ok=True)
 
     with open(os.path.join(test_directory, file_a.name), "w") as f:
         f.write("This is file A in the subdirectory.")
