@@ -358,66 +358,67 @@ class Agent:
         )
 
     def single_step(self, command_name: str, arguments: str):
-        # Send message to AI, get response
-        self.user_input = (
-            self.arguments
-            if command_name == "human_feedback"
-            else "GENERATE NEXT COMMAND JSON"
-        )
-        godmode_log = ""
-        godmode_log += logger.typewriter_log(
-            "NEXT ACTION: ",
-            Fore.CYAN,
-            f"COMMAND = {Fore.CYAN}{command_name}{Style.RESET_ALL}"
-            f"  ARGUMENTS = {Fore.CYAN}{arguments}{Style.RESET_ALL}",
-        )
 
-        # Execute command
-        if command_name is not None and command_name.lower().startswith("error"):
-            result = f"Command {command_name} threw the following error: {arguments}"
-        elif command_name == "human_feedback":
-            result = f"Human feedback: {self.user_input}"
-        else:
-            print(command_name, arguments)
-            for plugin in self.cfg.plugins:
-                if not plugin.can_handle_pre_command():
-                    continue
-                command_name, arguments = plugin.pre_command(
-                    command_name, arguments
-                )
-            command_result = execute_command(
-                command_registry=self.command_registry,
-                command_name=command_name,
-                prompt=self.prompt_generator,
-                agent_manager=self.agent_manager,
-                arguments=arguments,
-                cfg=self.cfg,
+        if command_name != "###start###":
+            # Send message to AI, get response
+            self.user_input = (
+                self.arguments
+                if command_name == "human_feedback"
+                else "GENERATE NEXT COMMAND JSON"
             )
-            result = f"Command {command_name} returned: " f"{command_result}"
-
-            if self.next_action_count > 0:
-                self.next_action_count -= 1
-
-        memory_to_add = (
-            f"Assistant Reply: {self.assistant_reply} "
-            f"\nResult: {result} "
-            f"\nHuman Feedback: {self.user_input} "
-        )
-
-        self.memory.add(memory_to_add)
-
-        # Check if there's a result from the command append it to the message
-        # history
-        if result is not None:
-            self.full_message_history.append(create_chat_message("system", result))
-            godmode_log += logger.typewriter_log("SYSTEM: ", Fore.YELLOW, result)
-        else:
-            self.full_message_history.append(
-                create_chat_message("system", "Unable to execute command")
-            )
+            godmode_log = ""
             godmode_log += logger.typewriter_log(
-                "SYSTEM: ", Fore.YELLOW, "Unable to execute command"
+                "NEXT ACTION: ",
+                Fore.CYAN,
+                f"COMMAND = {Fore.CYAN}{command_name}{Style.RESET_ALL}"
+                f"  ARGUMENTS = {Fore.CYAN}{arguments}{Style.RESET_ALL}",
             )
+
+            # Execute command
+            if command_name is not None and command_name.lower().startswith("error"):
+                result = f"Command {command_name} threw the following error: {arguments}"
+            elif command_name == "human_feedback":
+                result = f"Human feedback: {self.user_input}"
+            else:
+                for plugin in self.cfg.plugins:
+                    if not plugin.can_handle_pre_command():
+                        continue
+                    command_name, arguments = plugin.pre_command(
+                        command_name, arguments
+                    )
+                command_result = execute_command(
+                    command_registry=self.command_registry,
+                    command_name=command_name,
+                    prompt=self.prompt_generator,
+                    agent_manager=self.agent_manager,
+                    arguments=arguments,
+                    cfg=self.cfg,
+                )
+                result = f"Command {command_name} returned: " f"{command_result}"
+
+                if self.next_action_count > 0:
+                    self.next_action_count -= 1
+
+            memory_to_add = (
+                f"Assistant Reply: {self.assistant_reply} "
+                f"\nResult: {result} "
+                f"\nHuman Feedback: {self.user_input} "
+            )
+
+            self.memory.add(memory_to_add)
+
+            # Check if there's a result from the command append it to the message
+            # history
+            if result is not None:
+                self.full_message_history.append(create_chat_message("system", result))
+                godmode_log += logger.typewriter_log("SYSTEM: ", Fore.YELLOW, result)
+            else:
+                self.full_message_history.append(
+                    create_chat_message("system", "Unable to execute command")
+                )
+                godmode_log += logger.typewriter_log(
+                    "SYSTEM: ", Fore.YELLOW, "Unable to execute command"
+                )
 
         self.assistant_reply = chat_with_ai(
             self,
