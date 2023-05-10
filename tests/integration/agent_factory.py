@@ -43,7 +43,7 @@ def memory_none(agent_test_config: Config):
 def browser_agent(agent_test_config, memory_none: NoMemory, workspace: Workspace):
     command_registry = CommandRegistry()
     command_registry.import_commands("autogpt.commands.file_operations")
-    command_registry.import_commands("autogpt.commands.web_selenium")
+    # command_registry.import_commands("autogpt.commands.web_selenium")
     command_registry.import_commands("autogpt.app")
     command_registry.import_commands("autogpt.commands.task_statuses")
 

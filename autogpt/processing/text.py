@@ -2,7 +2,6 @@
 from typing import Dict, Generator, Optional
 
 import spacy
-from selenium.webdriver.remote.webdriver import WebDriver
 from autogpt.commands.web_requests import create_message
 
 from autogpt.config import Config
