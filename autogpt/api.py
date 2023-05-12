@@ -521,6 +521,12 @@ def api_files():
         print_log("/api/files error", severity=ERROR, errorMsg=e)
         raise e
 
+def convert_none_or_date_to_isoformat(obj):
+    if obj is None:
+        return None
+    if isinstance(obj, datetime.datetime):
+        return obj.isoformat()
+    return None
 
 @app.route("/api/sessions", methods=["POST"])  # type: ignore
 @limiter.limit("16 per minute")
@@ -547,11 +553,11 @@ def sessions():
                         "agent_id": r.get("agent_id", ""),
                         "ai_name": r.get("ai_name", ""),
                         "ai_role": r.get("ai_role", ""),
-                        "created": r.get("created", None),
+                        "created": convert_none_or_date_to_isoformat(r.get("created", None)),
                     }
                     for r in results
                 ],
-            }
+            }, default=str
         )
 
     except Exception as e:
