@@ -84,9 +84,11 @@ class AgentManager:
             The agent's response
         """
         try:
-            try:
+            if key in self.agents:
+                task, messages, model = self.agents[key]
+            elif int(key) in self.agents:
                 task, messages, model = self.agents[int(key)]
-            except KeyError:
+            elif str(key) in self.agents:
                 task, messages, model = self.agents[str(key)]
 
             # Add user message to message history before sending to agent
