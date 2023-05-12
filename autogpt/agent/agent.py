@@ -360,6 +360,7 @@ class Agent:
     def single_step(self, command_name: str, arguments: str):
         godmode_log = ""
         memory_to_add = ""
+        result = "Agent started"
 
         if command_name != "###start###":
             # Send message to AI, get response
