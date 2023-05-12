@@ -2,19 +2,19 @@
 from __future__ import annotations
 
 from typing import List
+from autogpt.api_log import print_log
 
 from autogpt.config.config import Config
 from autogpt.llm import Message, create_chat_completion
 
-class AgentManager():
+
+class AgentManager:
     """Agent manager for managing GPT agents"""
 
     agents: dict[int, tuple[str, list[dict[str, str]], str]]
 
     def __init__(self, cfg: Config, agents={}):
-        self.next_key = len(
-            agents.keys()
-        )
+        self.next_key = len(agents.keys())
         self.cfg = cfg
         self.agents = agents  # key, (task, full_message_history, model)
 
@@ -83,44 +83,59 @@ class AgentManager():
         Returns:
             The agent's response
         """
-        task, messages, model = self.agents[int(key)]
+        try:
+            task, messages, model = self.agents[int(key)]
 
-        # Add user message to message history before sending to agent
-        messages.append({"role": "user", "content": message})
+            # Add user message to message history before sending to agent
+            messages.append({"role": "user", "content": message})
 
-        for plugin in self.cfg.plugins:
-            if not plugin.can_handle_pre_instruction():
-                continue
-            if plugin_messages := plugin.pre_instruction(messages):
-                for plugin_message in plugin_messages:
-                    messages.append(plugin_message)
+            for plugin in self.cfg.plugins:
+                if not plugin.can_handle_pre_instruction():
+                    continue
+                if plugin_messages := plugin.pre_instruction(messages):
+                    for plugin_message in plugin_messages:
+                        messages.append(plugin_message)
 
-        # Start GPT instance
-        agent_reply = create_chat_completion(
-            model=model,
-            messages=messages,
-            cfg=self.cfg,
-        )
+            # Start GPT instance
+            agent_reply = create_chat_completion(
+                model=model,
+                messages=messages,
+                cfg=self.cfg,
+            )
 
-        messages.append({"role": "assistant", "content": agent_reply})
+            messages.append({"role": "assistant", "content": agent_reply})
 
-        plugins_reply = agent_reply
-        for i, plugin in enumerate(self.cfg.plugins):
-            if not plugin.can_handle_on_instruction():
-                continue
-            if plugin_result := plugin.on_instruction(messages):
-                sep = "\n" if i else ""
-                plugins_reply = f"{plugins_reply}{sep}{plugin_result}"
-        # Update full message history
-        if plugins_reply and plugins_reply != "":
-            messages.append({"role": "assistant", "content": plugins_reply})
+            plugins_reply = agent_reply
+            for i, plugin in enumerate(self.cfg.plugins):
+                if not plugin.can_handle_on_instruction():
+                    continue
+                if plugin_result := plugin.on_instruction(messages):
+                    sep = "\n" if i else ""
+                    plugins_reply = f"{plugins_reply}{sep}{plugin_result}"
+            # Update full message history
+            if plugins_reply and plugins_reply != "":
+                messages.append({"role": "assistant", "content": plugins_reply})
 
-        for plugin in self.cfg.plugins:
-            if not plugin.can_handle_post_instruction():
-                continue
-            agent_reply = plugin.post_instruction(agent_reply)
+            for plugin in self.cfg.plugins:
+                if not plugin.can_handle_post_instruction():
+                    continue
+                agent_reply = plugin.post_instruction(agent_reply)
 
-        return agent_reply
+            return agent_reply
+        except Exception as e:
+            # print trace
+            import traceback, json
+            print_log(
+                "AGENT ERROR CHAT",
+                errorMsg=e,
+                agentDict=json.dumps(self.agents),
+                key=key,
+                keytype=type(key),
+                trace=traceback.format_exc(),
+                severity="ERROR",
+            )
+
+            raise e
 
     def list_agents(self) -> list[tuple[str | int, str]]:
         """Return a list of all agents

@@ -38,7 +38,7 @@ JSON_SCHEMA = """
 global_config = Config()
 
 
-def auto_fix_json(json_string: str, schema: str) -> str:
+def auto_fix_json(json_string: str, schema: str, cfg: Config) -> str:
     """Fix the given JSON string to make it parseable and fully compliant with
         the provided schema using GPT-3.
 
@@ -64,7 +64,7 @@ def auto_fix_json(json_string: str, schema: str) -> str:
     if not json_string.startswith("`"):
         json_string = "```json\n" + json_string + "\n```"
     result_string = call_ai_function(
-        function_string, args, description_string, model=global_config.fast_llm_model
+        function_string, args, description_string, model=global_config.fast_llm_model, cfg=cfg
     )
     logger.debug("------------ JSON FIX ATTEMPT ---------------")
     logger.debug(f"Original JSON: {json_string}")
@@ -196,7 +196,7 @@ def try_ai_fix(
             " slightly."
         )
     # Now try to fix this up using the ai_functions
-    ai_fixed_json = auto_fix_json(json_to_load, JSON_SCHEMA)
+    ai_fixed_json = auto_fix_json(json_to_load, JSON_SCHEMA, cfg)
 
     if ai_fixed_json != "failed":
         return json.loads(ai_fixed_json)
