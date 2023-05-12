@@ -130,7 +130,6 @@ class AgentManager:
                 errorMsg=e,
                 agentDict=json.dumps(self.agents),
                 key=key,
-                keytype=type(key),
                 trace=traceback.format_exc(),
                 severity="ERROR",
             )
