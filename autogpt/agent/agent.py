@@ -358,6 +358,7 @@ class Agent:
         )
 
     def single_step(self, command_name: str, arguments: str):
+        godmode_log = ""
 
         if command_name != "###start###":
             # Send message to AI, get response
@@ -366,7 +367,6 @@ class Agent:
                 if command_name == "human_feedback"
                 else "GENERATE NEXT COMMAND JSON"
             )
-            godmode_log = ""
             godmode_log += logger.typewriter_log(
                 "NEXT ACTION: ",
                 Fore.CYAN,
