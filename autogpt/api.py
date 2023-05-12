@@ -543,6 +543,7 @@ def sessions():
                         "agent_id": r.get("agent_id", ""),
                         "ai_name": r.get("ai_name", ""),
                         "ai_role": r.get("ai_role", ""),
+                        "created": r.get("created", None),
                     }
                     for r in results
                 ],
