@@ -1,7 +1,7 @@
 """Agent manager for managing GPT agents"""
 from __future__ import annotations
 
-from typing import List
+from typing import List, Union
 from autogpt.api_log import print_log
 
 from autogpt.config.config import Config
@@ -11,7 +11,7 @@ from autogpt.llm import Message, create_chat_completion
 class AgentManager:
     """Agent manager for managing GPT agents"""
 
-    agents: dict[int, tuple[str, list[dict[str, str]], str]]
+    agents: dict[Union[int, str], tuple[str, list[dict[str, str]], str]]
 
     def __init__(self, cfg: Config, agents={}):
         self.next_key = len(agents.keys())
@@ -84,7 +84,10 @@ class AgentManager:
             The agent's response
         """
         try:
-            task, messages, model = self.agents[int(key)]
+            try:
+                task, messages, model = self.agents[int(key)]
+            except KeyError:
+                task, messages, model = self.agents[str(key)]
 
             # Add user message to message history before sending to agent
             messages.append({"role": "user", "content": message})
@@ -125,6 +128,7 @@ class AgentManager:
         except Exception as e:
             # print trace
             import traceback, json
+
             print_log(
                 "AGENT ERROR CHAT",
                 errorMsg=e,
