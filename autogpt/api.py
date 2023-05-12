@@ -108,7 +108,11 @@ def new_interact(
     # get agent.agents
     agents = {}
     try:
-        agents = agent.get("agents") or {}
+        a = agent.get("agents") or {}
+        if type(a) == str:
+            agents = json.loads(a)
+        else:
+            agents = a
     except Exception as e:
         print("AGENT ERROR:", e)
         pass
