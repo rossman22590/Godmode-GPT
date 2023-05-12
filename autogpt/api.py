@@ -105,6 +105,14 @@ def new_interact(
     except Exception as e:
         summary = None
 
+    # get agent.agents
+    agents = {}
+    try:
+        agents = agent.get("agents") or {}
+    except Exception as e:
+        print("AGENT ERROR:", e)
+        pass
+
     agent = Agent(
         ai_name=ai_config.ai_name,
         ai_role=ai_config.ai_role,
@@ -114,7 +122,7 @@ def new_interact(
         command_name=command_name,
         arguments=arguments,
         assistant_reply=assistant_reply,
-        agents={},
+        agents=agents,
         triggering_prompt=triggering_prompt,
         system_prompt=system_prompt,
         memory=memory,
@@ -187,7 +195,7 @@ def new_interact(
                 "arguments": json.dumps(agent.arguments),
                 "assistant_reply": json.dumps(agent.assistant_reply),
                 "thoughts": json.dumps(thoughts),
-                "agents": agent.agent_manager.agents,
+                "agents": json.dumps(agent.agent_manager.agents),
                 "tasks": tasks,
             }
         )
